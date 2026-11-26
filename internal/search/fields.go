@@ -135,6 +135,10 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 			Keyed: func(en *Entry) map[string]int { return en.Card.Keywords },
 		},
 		{
+			Name: "ability", Alias: "ab", Kind: query.KindEnum, Values: derive.Abilities,
+			Strings: func(en *Entry) []string { return en.Card.Abilities },
+		},
+		{
 			// Traits are open: any value is allowed.
 			Name: "trait", Alias: "tr", Kind: query.KindEnum,
 			Strings: func(en *Entry) []string { return en.Card.Traits },

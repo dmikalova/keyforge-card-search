@@ -4,81 +4,100 @@ import "strconv"
 
 // SearchPage is the query page with the facets and the first batch.
 templ SearchPage(v PageView) {
-	@page(pageTitle(v.Query), "Search every KeyForge card by house, set, type, keyword, power, and more.", v.Query) {
+	@page(PageTitle(v.Query), "Search every KeyForge card by house, set, type, keyword, power, and more.", v, true) {
 		<main class="search">
 			if v.Missing {
 				<p class="banner" role="status">The card dataset is not published yet. Check back soon.</p>
 			}
-			<details id="builder" class="builder">
-				<summary>Builder (b)</summary>
-				<p class="muted">The full builder comes later. Click a house to add it to the query.</p>
-				<div class="chips">
-					for _, h := range v.Houses {
-						<a class="chip" href={ templ.SafeURL(h.URL) }>{ h.Label }</a>
-					}
-				</div>
-			</details>
-			if v.Err != nil {
-				<div class="error" role="alert">
-					<p>{ v.Err.Msg }</p>
-					<p class="mark"><code>{ v.Err.Before }<mark>{ v.Err.At }</mark>{ v.Err.After }</code></p>
-					if v.Err.Suggest != "" {
-						<p>Did you mean <code>{ v.Err.Suggest }</code>?</p>
-					}
-				</div>
-			} else {
-				<div class="summary">
-					<p><strong>{ strconv.Itoa(v.Count) }</strong> { plural(v.Count, "card", "cards") }</p>
-					<label class="size">
-						Size
-						<input id="size" type="range" min="120" max="300" step="20" value="180" aria-label="Card size"/>
-					</label>
-					<a href={ templ.SafeURL(v.JSONURL) } download="cards.json">JSON</a>
-				</div>
-				<div class="layout">
-					<aside class="facets">
-						for _, g := range v.Facets {
-							@facetGroup(g)
-						}
-					</aside>
-					<section class="results">
-						<div id="grid" class="grid">
-							@Tiles(v.Tiles)
-						</div>
-						@Sentinel(v.Next)
-					</section>
-				</div>
-			}
-			<div id="zoom" class="zoom" hidden>
-				<img alt=""/>
-			</div>
+			@ResultsView(v.Results)
+			<div id="zoom" class="zoom" hidden></div>
 		</main>
 	}
+}
+
+// ResultsView is the part of the page that a new query replaces.
+templ ResultsView(r Results) {
+	<div id="results">
+		if r.Err != nil {
+			<div class="error" role="alert">
+				<p>{ r.Err.Msg }</p>
+				<p class="mark"><code>{ r.Err.Before }<mark>{ r.Err.At }</mark>{ r.Err.After }</code></p>
+				if r.Err.Suggest != "" {
+					<p>Did you mean <code>{ r.Err.Suggest }</code>?</p>
+				}
+			</div>
+		} else {
+			<div class="summary">
+				<p><strong>{ strconv.Itoa(r.Count) }</strong> { plural(r.Count, "card", "cards") }</p>
+				<label class="size">
+					Size
+					<input id="size" type="range" min="120" max="300" step="20" value="180" aria-label="Card size"/>
+				</label>
+			</div>
+			<div class="layout">
+				<aside class="facets">
+					for _, g := range r.Facets {
+						@facetGroup(g)
+					}
+				</aside>
+				<section class="results">
+					<div id="grid" class="grid">
+						@Tiles(r.Tiles)
+					</div>
+					@Sentinel(r.Next)
+				</section>
+			</div>
+		}
+	</div>
 }
 
 templ facetGroup(g FacetGroup) {
 	<section class="facet">
 		<h2>{ g.Name }</h2>
-		<ul class={ templ.KV("histogram", g.Histogram) }>
+		<ul class="bars">
 			for _, c := range g.Counts {
-				<li>
-					<a href={ templ.SafeURL(c.URL) }>
-						if g.Histogram {
-							<span class="bar" style={ barStyle(c.Percent) }></span>
-						}
-						<span class="label">{ c.Label }</span>
-						<span class="n">{ strconv.Itoa(c.N) }</span>
-					</a>
-				</li>
+				@facetLink(c)
 			}
 		</ul>
+		if len(g.More) > 0 {
+			<details class="more">
+				<summary>{ strconv.Itoa(len(g.More)) } more</summary>
+				<ul class="bars">
+					for _, c := range g.More {
+						@facetLink(c)
+					}
+				</ul>
+			</details>
+		}
 	</section>
+}
+
+templ facetLink(c FacetLink) {
+	<li>
+		<a
+			href={ templ.SafeURL(c.URL) }
+			class={ templ.KV("active", c.Active) }
+			aria-pressed={ strconv.FormatBool(c.Active) }
+			title={ toggleTitle(c) }
+			data-on:click__prevent={ action("toggle", "term", c.Term) }
+		>
+			<span class="bar" style={ barStyle(c.Percent) }></span>
+			<span class="label">{ c.Label }</span>
+			<span class="n">{ strconv.Itoa(c.N) }</span>
+		</a>
+	</li>
 }
 
 // Tiles is a run of result tiles. A batch appends it to the grid.
 templ Tiles(tiles []Tile) {
 	for _, t := range tiles {
-		<button type="button" class="tile" data-i={ strconv.Itoa(t.Index) } data-full={ t.Image } title={ t.Title + " (" + t.Caption + ")" }>
+		<button
+			type="button"
+			class="tile"
+			data-i={ strconv.Itoa(t.Index) }
+			title={ t.Title + " (" + t.Caption + ")" }
+			data-on:click={ "@get('/card?id=" + QueryEscape(t.ID) + "&p=" + strconv.Itoa(t.Print) + "')" }
+		>
 			if t.Image != "" {
 				<img src={ t.Image } alt={ t.Title } loading="lazy" decoding="async" width="300" height="420"/>
 			} else {
@@ -99,4 +118,76 @@ templ Sentinel(next string) {
 	} else {
 		<div id="sentinel"></div>
 	}
+}
+
+// Zoom is the card view: the image of one printing and every field of the
+// card. A click on a printing shows its image.
+templ Zoom(v CardView) {
+	<div id="zoom" class="zoom" role="dialog" aria-modal="true" aria-label={ v.Title }>
+		<div class="zoom-card">
+			<figure class="zoom-image">
+				if v.Current().Image != "" {
+					<img id="zoom-img" src={ v.Current().Image } alt={ v.Title } width="300" height="420"/>
+				} else {
+					<span class="noimage">{ v.Title }</span>
+				}
+			</figure>
+			<div class="zoom-info">
+				<button type="button" class="zoom-close" aria-label="Close">×</button>
+				<h2>{ v.Title }</h2>
+				<dl>
+					@dlRow("House", v.House)
+					@dlRow("Type", v.Type)
+					@dlRow("Traits", v.Traits)
+					for _, f := range v.Stats {
+						@dlRow(f.Label, f.Value)
+					}
+					@dlRow("Keywords", v.Keywords)
+					@dlRow("Abilities", v.Abilities)
+					@dlRow("Enhance", v.Enhance)
+					@dlRow("Flags", v.Flags)
+				</dl>
+				if len(v.Text) > 0 {
+					<div class="zoom-text">
+						for _, line := range v.Text {
+							<p>{ line }</p>
+						}
+					</div>
+				}
+				<h3>Printings</h3>
+				<ul class="printings">
+					for _, p := range v.Printings {
+						<li>
+							<button type="button" class={ "printing", templ.KV("active", p.Index == v.Print) } data-img={ p.Image } data-flavor={ p.Flavor }>
+								<span>{ p.Label }</span>
+								<span class="muted">{ p.Rarity }</span>
+								if p.Anomaly {
+									<span class="rarity-mark anomaly" title="Anomaly">⚡</span>
+								}
+							</button>
+						</li>
+					}
+				</ul>
+				<p id="zoom-flavor" class="flavor">{ v.Current().Flavor }</p>
+				<details class="mvids">
+					<summary>Master Vault IDs</summary>
+					for _, p := range v.Printings {
+						<p><span class="muted">{ p.Label }:</span> <code>{ p.MVIDs }</code></p>
+					}
+				</details>
+			</div>
+		</div>
+	</div>
+}
+
+templ dlRow(label, value string) {
+	if value != "" {
+		<dt>{ label }</dt>
+		<dd>{ value }</dd>
+	}
+}
+
+// QueryError is the short error line under the search bar.
+templ QueryError(msg string) {
+	<p id="qerror" class="qerror" role="status">{ msg }</p>
 }

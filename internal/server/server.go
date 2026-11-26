@@ -47,6 +47,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", s.page)
 	mux.HandleFunc("GET /batch", s.batch)
 	mux.HandleFunc("GET /random", s.random)
+	mux.HandleFunc("GET /results", s.live)
+	mux.HandleFunc("GET /card", s.cardView)
 	mux.HandleFunc("GET /syntax", func(w http.ResponseWriter, r *http.Request) {
 		s.render(w, r, web.SyntaxPage())
 	})
@@ -80,40 +82,56 @@ func queryOf(r *http.Request) string {
 func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	q := queryOf(r)
 
-	// The query form sends fz=1 and the Fuzzy box. Put the box's state in
-	// the query, so the URL holds it.
+	// The query form sends the chips as q, the draft as d, fz=1, and the
+	// Fuzzy box. Join them and put the box's state in the query, so the URL
+	// holds it.
 	if r.URL.Query().Get("fz") == "1" {
+		if d := strings.TrimSpace(r.URL.Query().Get("d")); d != "" {
+			q = search.AddTerm(q, d)
+		}
 		on := r.URL.Query().Get("fuzzy") == "on"
 		http.Redirect(w, r, web.SearchURL(search.SetFuzzy(q, on)), http.StatusSeeOther)
 
 		return
 	}
-	v := web.PageView{
-		Query:   q,
-		JSONURL: "/api/cards?q=" + web.QueryEscape(q),
-		Houses:  web.NewHouseLinks(q),
-		Missing: s.src.Missing(),
-		Fuzzy:   !web.FuzzyOff(q),
+
+	e := s.src.Engine()
+	v := web.PageView{Query: q, Missing: s.src.Missing()}
+
+	if chips, err := e.Chips(q); err == nil {
+		v.Chips = web.NewChips(chips)
+	} else {
+		v.Draft = q
 	}
 
-	res, err := s.src.Engine().Search(q)
-	switch {
-	case errors.Is(err, search.ErrNoSeed):
+	at, _ := strconv.Atoi(r.URL.Query().Get("at"))
+
+	res, err := e.Search(q)
+	if errors.Is(err, search.ErrNoSeed) {
 		http.Redirect(w, r, web.SearchURL(search.WithSeed(q, s.seed())), http.StatusSeeOther)
 
 		return
-	case err != nil:
-		v.Err = errorView(q, err)
-	default:
-		at, _ := strconv.Atoi(r.URL.Query().Get("at"))
-		first := res.Items[:web.FirstCount(at, len(res.Items))]
-		v.Count = len(res.Items)
-		v.Facets = web.NewFacets(q, res.Facets)
-		v.Tiles = web.NewTiles(first, 0)
-		v.Next = web.BatchURL(q, len(first), len(res.Items))
 	}
 
+	v.Results = s.results(q, res, err, at)
 	s.render(w, r, web.SearchPage(v))
+}
+
+// results makes the results part of the page: the error, or the count, the
+// facets, and the tiles up to the place at.
+func (s *Server) results(q string, res *search.Result, err error, at int) web.Results {
+	if err != nil {
+		return web.Results{Err: errorView(q, err)}
+	}
+
+	first := res.Items[:web.FirstCount(at, len(res.Items))]
+
+	return web.Results{
+		Count:  len(res.Items),
+		Facets: web.NewFacets(s.src.Engine(), q, res.Facets),
+		Tiles:  web.NewTiles(first, 0),
+		Next:   web.BatchURL(q, len(first), len(res.Items)),
+	}
 }
 
 // errorView splits the query at a parse error.

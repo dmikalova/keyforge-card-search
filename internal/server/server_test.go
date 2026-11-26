@@ -48,7 +48,9 @@ func TestPageShowsResultsAndFacets(t *testing.T) {
 	body := w.Body.String()
 
 	for _, want := range []string{
-		`value="h:brobnar"`,
+		`<button type="button" class="chip-text" title="Edit"`,
+		`value="house:brobnar"`,
+		`data-signals="{&#34;draft&#34;:&#34;&#34;,&#34;q&#34;:&#34;house:brobnar&#34;}"`,
 		`class="tile"`,
 		`ageofascension/001.webp`,
 		`<h2>House</h2>`,

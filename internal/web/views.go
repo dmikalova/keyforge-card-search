@@ -1,10 +1,15 @@
 package web
 
 import (
+	"encoding/json"
+	"maps"
 	"net/url"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/dmikalova/keyforge-data/card"
 
 	"github.com/dmikalova/keyforge-card-search/internal/catalog"
 	"github.com/dmikalova/keyforge-card-search/internal/search"
@@ -23,6 +28,10 @@ type Tile struct {
 	// Anomaly is true for an anomaly printing. The tile shows the anomaly
 	// rarity mark.
 	Anomaly bool
+	// ID is the card ID, and Print is the index of the shown printing in the
+	// card's printings. A click opens the card view with them.
+	ID    string
+	Print int
 	// Index is the place of the tile in the results, from 0. The page keeps
 	// the index of the top tile in the URL, so a reload comes back to it.
 	Index int
@@ -36,38 +45,95 @@ type ErrorView struct {
 	Before, At, After string
 }
 
-// FacetGroup is one facet with the links that add its terms.
+// FacetGroup is one facet with the links that add or remove its terms.
 type FacetGroup struct {
 	Name   string
 	Counts []FacetLink
-	// Histogram is true for power and armor.
-	Histogram bool
+	// More are the values after the first ones. The page shows them in a
+	// closed list.
+	More []FacetLink
 }
 
 // FacetLink is one facet value.
 type FacetLink struct {
 	Label string
 	N     int
-	URL   string
-	// Percent is the bar width of a histogram value.
+	// URL is the page of the query with the term toggled: added, or removed
+	// if the query has it.
+	URL string
+	// Term is the query term of the value.
+	Term string
+	// Active is true if the query has the term at the top level.
+	Active bool
+	// Percent is the bar width: the count as a part of the largest count.
 	Percent int
 }
 
-// PageView is the search page.
-type PageView struct {
-	Query  string
+// Chip is one top-level term of the query in the search bar.
+type Chip struct {
+	Text  string
+	Index int
+	// Negated is true for a term with a minus sign.
+	Negated bool
+}
+
+// Results is the part of the search page that a new query replaces: the
+// count, the facets, and the first tiles, or the parse error.
+type Results struct {
 	Err    *ErrorView
 	Count  int
 	Facets []FacetGroup
 	Tiles  []Tile
 	// Next is the URL of the next batch, or empty.
-	Next    string
-	JSONURL string
-	Houses  []FacetLink
+	Next string
+}
+
+// PageView is the search page.
+type PageView struct {
+	// Query is the whole query: the chips and the draft.
+	Query string
+	// Chips are the committed terms. Draft is the text in the input after
+	// the chips. A query with a parse error has no chips: it is all draft.
+	Chips []Chip
+	Draft string
+	Results
 	// Missing is true when the card dataset is not published yet.
 	Missing bool
-	// Fuzzy is true when fuzzy name matching is on.
-	Fuzzy bool
+}
+
+// Signals returns the Datastar signals of the page: the committed query and
+// the draft.
+func (v PageView) Signals() string {
+	return SignalsJSON(strings.Join(chipTexts(v.Chips), " "), v.Draft)
+}
+
+// SignalsJSON returns the Datastar signals object.
+func SignalsJSON(q, draft string) string {
+	b, err := json.Marshal(map[string]string{"q": q, "draft": draft})
+	if err != nil {
+		return "{}"
+	}
+
+	return string(b)
+}
+
+func chipTexts(chips []Chip) []string {
+	out := make([]string, len(chips))
+	for i, c := range chips {
+		out[i] = c.Text
+	}
+
+	return out
+}
+
+// NewChips makes the chips of the terms.
+func NewChips(terms []string) []Chip {
+	out := make([]Chip, len(terms))
+	for i, t := range terms {
+		out[i] = Chip{Text: t, Index: i, Negated: strings.HasPrefix(t, "-")}
+	}
+
+	return out
 }
 
 // NewTiles makes the tiles of the items. The first item has the index
@@ -77,6 +143,8 @@ func NewTiles(items []search.Item, start int) []Tile {
 
 	for i, it := range items {
 		out[i] = Tile{
+			ID:      it.Card.ID,
+			Print:   printIndex(it.Card, it.Printing),
 			Title:   it.Card.Title,
 			Image:   catalog.ImageURL(it.Printing.Image),
 			Caption: it.Set.Code + " " + it.Printing.Number,
@@ -88,6 +156,16 @@ func NewTiles(items []search.Item, start int) []Tile {
 	return out
 }
 
+func printIndex(c *card.Card, p *card.Printing) int {
+	for i := range c.Printings {
+		if &c.Printings[i] == p {
+			return i
+		}
+	}
+
+	return 0
+}
+
 // SearchURL returns the page URL of a query.
 func SearchURL(q string) string {
 	if q == "" {
@@ -95,6 +173,11 @@ func SearchURL(q string) string {
 	}
 
 	return "/?q=" + url.QueryEscape(q)
+}
+
+// JSONURL returns the export URL of a query.
+func JSONURL(q string) string {
+	return "/api/cards?q=" + url.QueryEscape(q)
 }
 
 // BatchURL returns the URL of the batch at the offset, or empty if the
@@ -107,23 +190,36 @@ func BatchURL(q string, offset, total int) string {
 	return "/batch?q=" + url.QueryEscape(q) + "&offset=" + strconv.Itoa(offset)
 }
 
-// NewFacets makes the facet groups of a result.
-func NewFacets(q string, f search.Facets) []FacetGroup {
-	group := func(name string, counts []search.Count, histogram bool) FacetGroup {
-		g := FacetGroup{Name: name, Histogram: histogram}
+// facetTop is the number of values that a long facet shows before "more".
+const facetTop = 12
+
+// NewFacets makes the facet groups of a result. Each link toggles its term
+// in the query.
+func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
+	chips, _ := e.Chips(q)
+
+	group := func(name string, counts []search.Count, long bool) FacetGroup {
+		g := FacetGroup{Name: name}
 		top := 0
 
 		for _, c := range counts {
 			top = max(top, c.N)
 		}
 
-		for _, c := range counts {
-			g.Counts = append(g.Counts, FacetLink{
+		for i, c := range counts {
+			l := FacetLink{
 				Label:   c.Label,
 				N:       c.N,
-				URL:     SearchURL(search.AddTerm(q, c.Term)),
+				Term:    c.Term,
+				Active:  e.HasChip(chips, c.Term),
+				URL:     SearchURL(e.Toggle(q, c.Term)),
 				Percent: c.N * 100 / max(top, 1),
-			})
+			}
+			if long && i >= facetTop && !l.Active {
+				g.More = append(g.More, l)
+			} else {
+				g.Counts = append(g.Counts, l)
+			}
 		}
 
 		return g
@@ -136,8 +232,11 @@ func NewFacets(q string, f search.Facets) []FacetGroup {
 		group("Type", f.Types, false),
 		group("Rarity", f.Rarities, false),
 		group("Set", f.Sets, false),
-		group("Power", f.Power, true),
-		group("Armor", f.Armor, true),
+		group("Power", f.Power, false),
+		group("Armor", f.Armor, false),
+		group("Keyword", f.Keywords, false),
+		group("Ability", f.Abilities, false),
+		group("Trait", f.Traits, true),
 	} {
 		if len(g.Counts) > 0 {
 			out = append(out, g)
@@ -147,20 +246,138 @@ func NewFacets(q string, f search.Facets) []FacetGroup {
 	return out
 }
 
-// builderHouses are the houses of the builder stub, in printed order.
-var builderHouses = []string{
-	"brobnar", "dis", "ekwidon", "geistoid", "keyraken", "logos", "mars", "redemption",
-	"sanctum", "saurian", "shadows", "skyborn", "staralliance", "unfathomable", "untamed",
+// CardView is the zoomed card: the image and every field of the card.
+type CardView struct {
+	ID     string
+	Title  string
+	House  string
+	Type   string
+	Traits string
+	// Stats are the power, armor, and aember lines that the card has.
+	Stats     []Field
+	Keywords  string
+	Abilities string
+	Enhance   string
+	Flags     string
+	Text      []string
+	Printings []PrintView
+	// Print is the index of the shown printing.
+	Print int
 }
 
-// NewHouseLinks makes the builder's house links.
-func NewHouseLinks(q string) []FacetLink {
-	out := make([]FacetLink, len(builderHouses))
-	for i, h := range builderHouses {
-		out[i] = FacetLink{Label: search.HouseLabel(h), URL: SearchURL(search.AddTerm(q, "h:"+h))}
+// Field is one labeled value.
+type Field struct {
+	Label, Value string
+}
+
+// PrintView is one printing in the card view.
+type PrintView struct {
+	Index   int
+	Label   string
+	Rarity  string
+	Anomaly bool
+	Image   string
+	Flavor  string
+	MVIDs   string
+}
+
+// Current returns the shown printing.
+func (v CardView) Current() PrintView {
+	if v.Print >= 0 && v.Print < len(v.Printings) {
+		return v.Printings[v.Print]
+	}
+
+	return PrintView{}
+}
+
+// NewCardView makes the card view. setName gives the set code of a slug.
+func NewCardView(c *card.Card, shown int, setName func(string) string) CardView {
+	v := CardView{
+		ID:        c.ID,
+		Title:     c.Title,
+		House:     search.HouseLabel(search.HouseOf(c)),
+		Type:      capitalize(c.Type),
+		Traits:    strings.Join(mapStrings(c.Traits, capitalize), " • "),
+		Keywords:  keywordList(c.Keywords),
+		Abilities: strings.Join(mapStrings(c.Abilities, search.AbilityLabel), ", "),
+		Enhance:   countList(c.Enhance),
+		Flags:     strings.Join(c.Flags, ", "),
+		Print:     shown,
+	}
+
+	if c.Power != nil {
+		v.Stats = append(
+			v.Stats,
+			Field{"Power", c.Power.String()},
+			Field{"Armor", strconv.Itoa(c.Armor)},
+		)
+	}
+
+	if c.Aember > 0 {
+		v.Stats = append(v.Stats, Field{"Æmber", strconv.Itoa(c.Aember)})
+	}
+
+	for line := range strings.SplitSeq(c.Text, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			v.Text = append(v.Text, line)
+		}
+	}
+
+	for i, p := range c.Printings {
+		v.Printings = append(v.Printings, PrintView{
+			Index:   i,
+			Label:   setName(p.Set) + " " + p.Number,
+			Rarity:  p.Rarity,
+			Anomaly: p.Anomaly,
+			Image:   catalog.ImageURL(p.Image),
+			Flavor:  p.Flavor,
+			MVIDs:   strings.Join(p.MVIDs, " "),
+		})
+	}
+
+	return v
+}
+
+func mapStrings(in []string, f func(string) string) []string {
+	out := make([]string, len(in))
+	for i, s := range in {
+		out[i] = f(s)
 	}
 
 	return out
+}
+
+func keywordList(m map[string]int) string {
+	keys := slices.Sorted(maps.Keys(m))
+	parts := make([]string, len(keys))
+
+	for i, k := range keys {
+		parts[i] = capitalize(strings.ReplaceAll(k, "-", " "))
+		if m[k] > 0 {
+			parts[i] += " " + strconv.Itoa(m[k])
+		}
+	}
+
+	return strings.Join(parts, ", ")
+}
+
+func countList(m map[string]int) string {
+	keys := slices.Sorted(maps.Keys(m))
+	parts := make([]string, len(keys))
+
+	for i, k := range keys {
+		parts[i] = capitalize(k) + " ×" + strconv.Itoa(m[k])
+	}
+
+	return strings.Join(parts, ", ")
+}
+
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+
+	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 // syntaxField is one row of the field table on the syntax page.
@@ -178,6 +395,11 @@ var syntaxFields = []syntaxField{
 	{"type", "t", "t:artifact", ""},
 	{"rarity", "r", "r:rare", ""},
 	{"keyword", "k", "k:assault>=2", "A keyword, with an optional number."},
+	{
+		"ability", "ab", "ab:reap,fight",
+		"An ability trigger: play, reap, fight, action, omni, destroyed, beforefight, " +
+			"leavesplay, scrap. After Fight counts as fight, and After Reap as reap.",
+	},
 	{"trait", "tr", "tr:giant", ""},
 	{"number", "#", "#001", "The collector number. #S01 works too."},
 	{"power", "p", "p:x", "p:x gives the cards with X power."},
@@ -186,7 +408,8 @@ var syntaxFields = []syntaxField{
 	{"enhance", "en", "en:capture>=1", "The Enhance icons, in total or by icon."},
 }
 
-func pageTitle(q string) string {
+// PageTitle returns the page title of a query.
+func PageTitle(q string) string {
 	if q == "" {
 		return "KeyForge card search"
 	}
@@ -216,6 +439,18 @@ func QueryEscape(q string) string {
 	return url.QueryEscape(q)
 }
 
+// action returns a Datastar expression that sends an operation to the
+// results endpoint.
+func action(op string, params ...string) string {
+	var u strings.Builder
+	u.WriteString("/results?op=" + op)
+	for i := 0; i+1 < len(params); i += 2 {
+		u.WriteString("&" + params[i] + "=" + url.QueryEscape(params[i+1]))
+	}
+
+	return "@get('" + u.String() + "')"
+}
+
 // MaxRestore is the most tiles that a page renders to come back to a place
 // in the results.
 const MaxRestore = 1200
@@ -231,4 +466,29 @@ func FirstCount(at, total int) int {
 	}
 
 	return min(n, total)
+}
+
+// chipQuery returns the committed query of the chips.
+func chipQuery(chips []Chip) string {
+	return strings.Join(chipTexts(chips), " ")
+}
+
+func placeholder(chips []Chip) string {
+	if len(chips) > 0 {
+		return "Add a term"
+	}
+
+	return "Search cards: h:brobnar p>=5 or k:elusive"
+}
+
+func toggleTitle(c FacetLink) string {
+	if c.Active {
+		return "Remove " + c.Term
+	}
+
+	return "Add " + c.Term
+}
+
+func itoa(n int) string {
+	return strconv.Itoa(n)
 }

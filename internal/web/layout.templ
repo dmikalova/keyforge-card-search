@@ -1,7 +1,8 @@
 package web
 
-// page is the HTML shell that every page shares.
-templ page(title, description, query string) {
+// page is the HTML shell that every page shares. live is true on the search
+// page: the search bar then updates the results as the user types.
+templ page(title, description string, v PageView, live bool) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -20,33 +21,21 @@ templ page(title, description, query string) {
 			<script src={ Asset("js/search.js") } defer></script>
 			<script type="module" src={ Asset("js/datastar.js") }></script>
 		</head>
-		<body>
+		<body data-signals={ v.Signals() }>
 			<header class="top">
 				<a class="brand" href="/">
 					<img src={ Asset("img/kf-logo-flat.webp") } alt="KeyForge" width="120" height="40"/>
 					<span>card search</span>
 				</a>
-				<form class="query" action="/" method="get" role="search">
-					<input
-						id="q"
-						name="q"
-						type="search"
-						value={ query }
-						placeholder="Search cards: h:brobnar p>=5 or k:elusive"
-						autocomplete="off"
-						spellcheck="false"
-						aria-label="Query"
-					/>
-					<input type="hidden" name="fz" value="1"/>
-					<label class="fuzzy" title="Fuzzy name matching: the letters in order">
-						<input id="fuzzy" name="fuzzy" type="checkbox" value="on" checked?={ !FuzzyOff(query) }/>
-						Fuzzy
-					</label>
-					<button type="submit" class="primary">Search</button>
-				</form>
+				@SearchBar(v, live)
 				<nav class="actions">
-					<a class="button" href={ templ.SafeURL("/random?q=" + QueryEscape(query)) } title="Random card (r)">Random</a>
-					<a class="button help" href="/syntax" title="Query syntax (?)" aria-label="Query syntax">?</a>
+					if live {
+						<button type="button" id="random" class="button" title="Random card from the results (r)" data-on:click="@get('/card?random=1')">Random</button>
+					} else {
+						<a id="random" class="button" href="/random" title="Random card (r)">Random</a>
+					}
+					@DownloadLink(v.Query)
+					<a class="button round help" href="/syntax" title="Query syntax (?)" aria-label="Query syntax">?</a>
 				</nav>
 			</header>
 			{ children... }
@@ -57,4 +46,75 @@ templ page(title, description, query string) {
 			</footer>
 		</body>
 	</html>
+}
+
+// SearchBar is the query bar: a chip for each committed term, then the
+// draft input. Without JavaScript, the form sends the chips and the draft.
+templ SearchBar(v PageView, live bool) {
+	<form id="bar" class="query" action="/" method="get" role="search">
+		<div class="chipbar" data-on:click="evt.target === el && document.getElementById('q').focus()">
+			@Chips(v.Chips, live)
+			<input type="hidden" name="q" value={ chipQuery(v.Chips) }/>
+			<input
+				id="q"
+				name="d"
+				type="search"
+				value={ v.Draft }
+				placeholder={ placeholder(v.Chips) }
+				autocomplete="off"
+				spellcheck="false"
+				enterkeyhint="search"
+				aria-label="Query"
+				if live {
+					data-bind:draft
+					data-on:input__debounce.250ms={ action("type") }
+					data-on:keydown={ "(evt.key === 'Enter' && (evt.preventDefault(), " + action("commit") + ")) || (evt.key === 'Backspace' && $draft === '' && el.selectionStart === 0 && " + action("pop") + ")" }
+				}
+			/>
+		</div>
+		<input type="hidden" name="fz" value="1"/>
+		<label class="fuzzy" title="Fuzzy name matching: the letters in order">
+			<input
+				id="fuzzy"
+				name="fuzzy"
+				type="checkbox"
+				value="on"
+				checked?={ !FuzzyOff(v.Query) }
+				if live {
+					data-on:change={ "@get('/results?op=fuzzy&on=' + (el.checked ? 'on' : 'off'))" }
+				}
+			/>
+			Fuzzy
+		</label>
+		<button type="submit" class="primary">Search</button>
+		<p id="qerror" class="qerror" role="status"></p>
+	</form>
+}
+
+// Chips are the committed terms. A click on a chip's text moves it to the
+// draft for editing. The × removes it.
+templ Chips(chips []Chip, live bool) {
+	<span id="chips" class="chips">
+		for _, c := range chips {
+			<span class={ "chip", templ.KV("neg", c.Negated) }>
+				if live {
+					<button type="button" class="chip-text" title="Edit" data-on:click={ action("edit", "i", itoa(c.Index)) }>{ c.Text }</button>
+					<button type="button" class="chip-x" aria-label={ "Remove " + c.Text } data-on:click={ action("remove", "i", itoa(c.Index)) }>×</button>
+				} else {
+					<span class="chip-text">{ c.Text }</span>
+				}
+			</span>
+		}
+	</span>
+}
+
+// DownloadLink downloads the results as JSON.
+templ DownloadLink(q string) {
+	<a id="dl" class="button round icon" href={ templ.SafeURL(JSONURL(q)) } download="cards.json" title="Download the results as JSON" aria-label="Download the results as JSON">
+		<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M12 4v12"></path>
+			<path d="M6 11l6 6 6-6"></path>
+			<path d="M5 20h14"></path>
+		</svg>
+	</a>
 }

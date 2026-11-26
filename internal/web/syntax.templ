@@ -2,7 +2,7 @@ package web
 
 // SyntaxPage explains the query language (ADR 0001).
 templ SyntaxPage() {
-	@page("Query syntax · KeyForge card search", "The query syntax of the KeyForge card search.", "") {
+	@page("Query syntax · KeyForge card search", "The query syntax of the KeyForge card search.", PageView{}, false) {
 		<main class="syntax">
 			<h1>Query syntax</h1>
 			<p>Type terms in the query box. Terms next to each other must all match. A term matches a card if one of the card's printings matches it. Each card shows its newest printing that the set, rarity, number, and flavor terms select.</p>
@@ -16,11 +16,13 @@ templ SyntaxPage() {
 					@row("( )", "Group terms: (h:dis or h:mars) t:action.")
 					@row("\"steal 2\"", "An exact phrase.")
 					@row("p>=3, p:2..4", "Compare a number with = != < <= > >=, or give a range.")
-					@row("s:aoa,wc", "A comma list: one of the values matches. It works for set, house, type, rarity, trait, keyword, and is.")
+					@row("s:aoa,wc", "A comma list: one of the values matches. It works for set, house, type, rarity, trait, keyword, ability, and is.")
 					@row("s:aoa s:wc", "A card with a printing in AoA and a printing in WC.")
 					@row("s:aoa -s:wc", "A card in AoA that is not in WC.")
 				</tbody>
 			</table>
+			<h2>The search bar</h2>
+			<p>The results change as you type. Press Enter to make the typed terms into chips. Click a chip to edit it, or its × to remove it. A click on a value in the side panel adds its term, and a second click removes it.</p>
 			<h2>Fields</h2>
 			<table>
 				<thead><tr><th>Field</th><th>Alias</th><th>Example</th><th>Notes</th></tr></thead>
@@ -59,9 +61,9 @@ templ SyntaxPage() {
 					@row("Esc", "Close the card, or leave the query box.")
 					@row("arrows, h j k l", "Move between cards.")
 					@row("Enter", "Open the card.")
-					@row("r", "Show a random card.")
+					@row("r", "Show a random card from the results.")
 					@row("+ -", "Make the cards larger or smaller.")
-					@row("b", "Open or close the builder.")
+					@row("Backspace", "In an empty query box, edit the last term.")
 					@row("?", "Show this page.")
 				</tbody>
 			</table>

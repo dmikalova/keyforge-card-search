@@ -31,13 +31,14 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 - [x] Page layout with the keyforge.cards purple and orange theme.
 - [x] The query box. Show parse errors at the token.
 - [ ] Autocomplete after `field:` and for field names.
-- [ ] The builder. A stub with house links is in place:
-  - House icons and set icons, with all, none, and "exclude reprints".
-  - Type and rarity chips.
-  - Minimum and maximum for power, armor, and aember.
-  - Keyword and trait lists, and the enhance count.
-  - Name, text, and flavor boxes.
-  - Sort and order.
+- [x] The search bar with chips: one chip for each top-level term. The results
+  change as the user types. Enter makes the draft into chips. A chip click
+  edits the chip, and its × removes it. The builder dropdown is gone.
+- [x] The facet values toggle their terms, with spread bars for each facet.
+- [x] Keyword, ability (`ab:`), and trait facets.
+- [x] The card view shows every field of the card and each printing.
+- [ ] House icons and set icons in the facets.
+- [ ] Minimum and maximum for power, armor, and aember. Sort and order controls.
 - [x] The grid with batches, the sentinel, and lazy images (ADR 0002).
 - [x] The card size slider.
 - [x] The zoom view (click or tap to open and close).
@@ -46,7 +47,7 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 - [x] `sort:random` with a seed in the URL. The random card button.
 - [x] JSON export of the results, with absolute image URLs.
 - [x] Keyboard shortcuts: `/`, `Esc`, the arrow keys and `hjkl`, `Enter`, `r`, `?`,
-  `+`, `-`, `b`.
+  `+`, `-`. (`b` opened the builder, which is gone.)
 - [x] The `/syntax` page, linked from a `?` bubble.
 - [ ] A smoke e2e test with go-rod: load `/`, run a query, and count the tiles.
 

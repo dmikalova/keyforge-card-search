@@ -8,8 +8,8 @@ language with more fields. Ratings come later.
 
 ## Decision
 
-The text query is the source of truth. The URL holds it. The builder writes
-terms to it.
+The text query is the source of truth. The URL holds it. The search bar shows
+its top-level terms as chips, and the facets add and remove terms in it.
 
 Grammar:
 
@@ -77,5 +77,6 @@ Rules:
 
 - A user can copy the URL, edit the query, or click controls. All three give
   the same state.
-- The builder cannot show some queries. It shows "custom query" for these.
+- A chip is a top-level term in canonical form. A group in parentheses or an
+  OR is one chip.
 - Deck search adds fields to the same registry.

@@ -15,15 +15,17 @@ is a fan project and is not affiliated with Ghost Galaxy.
 
 ## Routes
 
-| Route            | Purpose                                              |
-| ---------------- | ---------------------------------------------------- |
-| `GET /?q=`       | The search page with the first batch and the facets  |
-| `GET /batch`     | The next batch, as a Datastar event stream           |
-| `GET /random?q=` | A redirect to one random card of the query           |
-| `GET /syntax`    | The query syntax                                     |
-| `GET /api/cards` | The results as JSON, with absolute image URLs        |
-| `GET /static/*`  | The embedded CSS, JS, fonts, and images              |
-| `GET /health`    | The dataset version and card count, as JSON          |
+| Route             | Purpose                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| `GET /?q=`        | The search page with the first batch and the facets           |
+| `GET /batch`      | The next batch, as a Datastar event stream                    |
+| `GET /results`    | A search bar operation (type, Enter, chip, facet), as events  |
+| `GET /card`       | The card view, or a random card of the query, as events       |
+| `GET /random?q=`  | A redirect to one random card of the query, without JS        |
+| `GET /syntax`     | The query syntax                                              |
+| `GET /api/cards`  | The results as JSON, with absolute image URLs                 |
+| `GET /static/*`   | The embedded CSS, JS, fonts, and images                       |
+| `GET /health`     | The dataset version and card count, as JSON                   |
 
 Run it locally with `go run ./cmd/search` and open <http://localhost:8080>.
 Without `DATASET_URL`, it serves the hand-written fixture. With the real data:

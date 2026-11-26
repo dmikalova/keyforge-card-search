@@ -31,6 +31,11 @@ type Facets struct {
 	// Power and Armor are histograms in numeric order. Power X is last.
 	Power []Count
 	Armor []Count
+	// Keywords, Abilities, and Traits count the cards that have each value,
+	// most first.
+	Keywords  []Count
+	Abilities []Count
+	Traits    []Count
 }
 
 func (e *Engine) count(items []Item) Facets {
@@ -40,12 +45,27 @@ func (e *Engine) count(items []Item) Facets {
 	setCounts := map[string]int{}
 	power := map[string]int{}
 	armor := map[string]int{}
+	keywords := map[string]int{}
+	abilities := map[string]int{}
+	traits := map[string]int{}
 
 	for _, it := range items {
 		houses[houseBucket(it.Card)]++
 		types[it.Card.Type]++
 		rarities[it.Printing.Rarity]++
 		setCounts[it.Set.Code]++
+
+		for k := range it.Card.Keywords {
+			keywords[k]++
+		}
+
+		for _, a := range it.Card.Abilities {
+			abilities[a]++
+		}
+
+		for _, t := range it.Card.Traits {
+			traits[t]++
+		}
 
 		if p := it.Card.Power; p != nil {
 			power[p.String()]++
@@ -64,8 +84,11 @@ func (e *Engine) count(items []Item) Facets {
 		Sets: counts(setCounts, "s", func(s string) string { return s }, func(a, b string) int {
 			return cmp.Or(cmp.Compare(e.codeIndex(a), e.codeIndex(b)), cmp.Compare(a, b))
 		}),
-		Power: counts(power, "p", func(s string) string { return s }, compareNumbers),
-		Armor: counts(armor, "ar", func(s string) string { return s }, compareNumbers),
+		Power:     counts(power, "p", func(s string) string { return s }, compareNumbers),
+		Armor:     counts(armor, "ar", func(s string) string { return s }, compareNumbers),
+		Keywords:  counts(keywords, "k", keywordLabel, byCount(keywords)),
+		Abilities: counts(abilities, "ab", AbilityLabel, byCount(abilities)),
+		Traits:    counts(traits, "tr", traitLabel, byCount(traits)),
 	}
 }
 
@@ -230,4 +253,43 @@ func SetFuzzy(q string, on bool) string {
 	}
 
 	return out
+}
+
+// byCount orders the values by count, most first, then by name.
+func byCount(m map[string]int) func(a, b string) int {
+	return func(a, b string) int {
+		return cmp.Or(cmp.Compare(m[b], m[a]), cmp.Compare(a, b))
+	}
+}
+
+func keywordLabel(k string) string {
+	return capitalize(strings.ReplaceAll(k, "-", " "))
+}
+
+// AbilityLabels are the printed names of the ability triggers.
+var AbilityLabels = map[string]string{
+	"action": "Action", "beforefight": "Before Fight", "destroyed": "Destroyed",
+	"fight": "Fight", "leavesplay": "Leaves Play", "omni": "Omni", "play": "Play",
+	"reap": "Reap", "scrap": "Scrap",
+}
+
+// AbilityLabel returns the printed name of an ability trigger.
+func AbilityLabel(a string) string {
+	if l, ok := AbilityLabels[a]; ok {
+		return l
+	}
+
+	return capitalize(a)
+}
+
+func traitLabel(t string) string {
+	return capitalize(t)
+}
+
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+
+	return strings.ToUpper(s[:1]) + s[1:]
 }

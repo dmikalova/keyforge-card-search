@@ -36,24 +36,51 @@
 
   const zoom = () => document.getElementById("zoom");
 
-  const openZoom = (tile) => {
-    const z = zoom();
-    const src = tile.dataset.full;
-    if (!z || !src) return;
-    const img = z.querySelector("img");
-    img.src = src;
-    img.alt = tile.title;
-    z.hidden = false;
-    z.dataset.from = String(tiles().indexOf(tile));
-  };
+  // The server sends the card view (Datastar). The page only remembers the
+  // tile that opened it, and closes it.
+  let opener = null;
 
   const closeZoom = () => {
     const z = zoom();
     if (!z || z.hidden) return false;
     z.hidden = true;
-    const t = tiles()[Number(z.dataset.from)];
-    if (t) t.focus();
+    if (opener && document.contains(opener)) opener.focus();
     return true;
+  };
+
+  // showPrinting shows the image and the flavor text of one printing.
+  const showPrinting = (btn) => {
+    const z = zoom();
+    const img = document.getElementById("zoom-img");
+    if (img && btn.dataset.img) img.src = btn.dataset.img;
+    const fl = document.getElementById("zoom-flavor");
+    if (fl) fl.textContent = btn.dataset.flavor || "";
+    for (const b of z.querySelectorAll(".printing")) {
+      b.classList.toggle("active", b === btn);
+    }
+  };
+
+  // The live search calls these from the server's scripts.
+  window.kfsearch = {
+    opened() {
+      const z = zoom();
+      if (!z) return;
+      z.hidden = false;
+      z.querySelector(".zoom-close")?.focus({ preventScroll: true });
+    },
+    // update puts a new query in the URL and the title. It drops the place
+    // in the results (at=N), because the results are new.
+    update({ url, title, fuzzy }) {
+      const now = new URL(location.href);
+      const next = new URL(url, location.href);
+      if (now.search !== next.search) {
+        history.replaceState(history.state, "", next);
+        window.scrollTo(0, 0);
+      }
+      if (title) document.title = title;
+      const box = document.getElementById("fuzzy");
+      if (box) box.checked = fuzzy;
+    },
   };
 
   const tiles = () => Array.from(document.querySelectorAll(".tile"));
@@ -88,8 +115,8 @@
     k: () => move(0, -1),
     j: () => move(0, 1),
     r: () => {
-      const q = new URLSearchParams(location.search).get("q") || "";
-      location.href = `/random?q=${encodeURIComponent(q)}`;
+      opener = null;
+      document.getElementById("random")?.click();
     },
     "?": () => {
       location.href = "/syntax";
@@ -97,10 +124,6 @@
     "+": () => setSize(current() + step),
     "=": () => setSize(current() + step),
     "-": () => setSize(current() - step),
-    b: () => {
-      const d = document.getElementById("builder");
-      if (d) d.open = !d.open;
-    },
   };
 
   document.addEventListener("keydown", (e) => {
@@ -132,21 +155,30 @@
   document.addEventListener("click", (e) => {
     const z = zoom();
     if (z && !z.hidden && z.contains(e.target)) {
-      closeZoom();
+      const btn = e.target.closest(".printing");
+      if (btn) {
+        showPrinting(btn);
+        return;
+      }
+      // A click on the backdrop or the close button closes the view. A
+      // click in the card's text does not, so the user can select text.
+      if (e.target === z || e.target.closest(".zoom-close")) closeZoom();
       return;
     }
     const tile = e.target.closest(".tile");
-    if (tile) openZoom(tile);
+    if (tile) opener = tile;
   });
 
   document.addEventListener("input", (e) => {
     if (e.target.id === "size") setSize(Number(e.target.value));
   });
 
-  // The Fuzzy box sends the query form, so the server puts the box's state
-  // in the query.
+  // On a page without live search (the syntax page), the Fuzzy box sends
+  // the query form, so the server puts the box's state in the query.
   document.addEventListener("change", (e) => {
-    if (e.target.id === "fuzzy") e.target.form.requestSubmit();
+    if (e.target.id === "fuzzy" && !document.getElementById("results")) {
+      e.target.form.requestSubmit();
+    }
   });
 
   // The place in the results. The page keeps the index of the top tile in
