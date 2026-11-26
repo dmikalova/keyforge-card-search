@@ -21,7 +21,7 @@ screenshots go to `tmp/ui`.
 | Path               | Role                                                         |
 | ------------------ | ------------------------------------------------------------ |
 | `cmd/search`       | The Cloud Run entrypoint: start the dataset loader, serve    |
-| `internal/catalog` | The dataset loader (`DATASET_URL`, ETag), and image URLs     |
+| `internal/catalog` | The dataset loader (`data/latest.json`, then the version), image URLs |
 | `internal/fixture` | The hand-written dataset for local work and tests            |
 | `internal/search`  | The query fields, the default printing, the sort, the facets |
 | `internal/server`  | The routes: page, card page, batch, random, syntax, JSON     |

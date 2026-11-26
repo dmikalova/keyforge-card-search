@@ -135,3 +135,80 @@ func TestLoaderMarksAMissingDataset(t *testing.T) {
 		t.Errorf("err %v, missing %t, %d cards", err, l.Missing(), l.Engine().Len())
 	}
 }
+
+// TestLoaderReadsThePointer checks that a loader of data/cards.json reads
+// data/latest.json, reads the version file only for a new version, and
+// falls back to data/cards.json when the pointer fails.
+func TestLoaderReadsThePointer(t *testing.T) {
+	ds, err := fixture.Dataset()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var pointerStatus, versionGets, fileGets atomic.Int32
+
+	version := atomic.Value{}
+	version.Store("fixture")
+
+	mux := http.NewServeMux()
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	mux.HandleFunc("/"+card.LatestPath, func(w http.ResponseWriter, _ *http.Request) {
+		if s := pointerStatus.Load(); s != 0 {
+			w.WriteHeader(int(s))
+
+			return
+		}
+
+		v, _ := version.Load().(string)
+		_ = json.NewEncoder(w).
+			Encode(card.Latest{Version: v, URL: srv.URL + "/" + card.VersionPath(v)})
+	})
+	mux.HandleFunc("/data/cards/", func(w http.ResponseWriter, _ *http.Request) {
+		versionGets.Add(1)
+
+		d := *ds
+		d.Version, _ = version.Load().(string)
+		_ = json.NewEncoder(w).Encode(&d)
+	})
+	mux.HandleFunc("/"+card.DatasetPath, func(w http.ResponseWriter, _ *http.Request) {
+		fileGets.Add(1)
+
+		d := *ds
+		d.Version = "file"
+		_ = json.NewEncoder(w).Encode(&d)
+	})
+
+	l, err := NewLoader(srv.URL+"/"+card.DatasetPath, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	for range 2 {
+		if err := l.Refresh(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if l.Engine().Version() != "fixture" || versionGets.Load() != 1 || fileGets.Load() != 0 {
+		t.Errorf("version %q, %d version reads, %d file reads",
+			l.Engine().Version(), versionGets.Load(), fileGets.Load())
+	}
+
+	version.Store("v2")
+
+	if err := l.Refresh(
+		ctx,
+	); err != nil || l.Engine().Version() != "v2" ||
+		versionGets.Load() != 2 {
+		t.Errorf("a new version: err %v, version %q", err, l.Engine().Version())
+	}
+
+	pointerStatus.Store(http.StatusNotFound)
+
+	if err := l.Refresh(ctx); err != nil || l.Engine().Version() != "file" {
+		t.Errorf("a failed pointer: err %v, version %q", err, l.Engine().Version())
+	}
+}
