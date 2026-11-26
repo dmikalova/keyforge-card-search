@@ -59,6 +59,8 @@ type Engine struct {
 	at      time.Time
 	// artistAliases are the other spellings of each artist.
 	artistAliases map[string][]string
+	// labels are the names of the data values for people.
+	labels Labels
 }
 
 // New returns an engine for the dataset. The engine keeps the dataset.
@@ -75,6 +77,7 @@ func New(ds *card.Dataset) (*Engine, error) {
 		version:       ds.Version,
 		at:            ds.Generated,
 		artistAliases: aliasesByArtist(ds.ArtistAliases),
+		labels:        Labels(ds.Labels),
 	}
 	for i, s := range setList {
 		e.setRank[s.Slug] = i

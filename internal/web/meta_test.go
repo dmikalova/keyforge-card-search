@@ -27,6 +27,7 @@ func TestCardMeta(t *testing.T) {
 	v := NewCardView(
 		c,
 		0,
+		nil,
 		func(s string) string { return s },
 		func(string) *card.Card { return nil },
 	)

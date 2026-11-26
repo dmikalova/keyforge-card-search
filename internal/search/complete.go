@@ -83,7 +83,7 @@ func (e *Engine) Completions() Completions {
 				n := query.Normalize(v)
 				cf.Values = append(cf.Values, n)
 
-				if label := valueLabel(f.Name, v); label != n {
+				if label := e.valueLabel(f.Name, v); label != n {
 					if cf.Labels == nil {
 						cf.Labels = map[string]string{}
 					}
@@ -159,13 +159,13 @@ func numericKeys(f query.FieldInfo) []string {
 
 // valueLabel returns the name to show for an enum value: the type with a
 // capital letter, the rarity and the other values as the dataset has them.
-func valueLabel(field, v string) string {
+func (e *Engine) valueLabel(field, v string) string {
 	if field == "type" {
-		return TypeLabel(v)
+		return e.labels.Type(v)
 	}
 
 	if field == "house" {
-		return HouseLabel(v)
+		return e.labels.House(v)
 	}
 
 	return v

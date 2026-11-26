@@ -349,13 +349,15 @@ func TestHouseFacetBuckets(t *testing.T) {
 }
 
 func TestFacetLabels(t *testing.T) {
-	r, err := engine(t).Search("")
+	e := engine(t)
+
+	r, err := e.Search("")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, c := range r.Facets.Types {
-		if c.Label != TypeLabel(c.Value) || c.Label[:1] == strings.ToLower(c.Label[:1]) {
+		if c.Label != e.Labels().Type(c.Value) || c.Label[:1] == strings.ToLower(c.Label[:1]) {
 			t.Errorf("type label %q for %q", c.Label, c.Value)
 		}
 	}

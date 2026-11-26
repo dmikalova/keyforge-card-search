@@ -206,7 +206,7 @@ func (s *Server) cardView(w http.ResponseWriter, r *http.Request) {
 // filters on marked.
 func (s *Server) markedCard(c *card.Card, shown int, q string) web.CardView {
 	e := s.src.Engine()
-	cv := web.NewCardView(c, shown, s.setName, e.Card)
+	cv := web.NewCardView(c, shown, e.Labels(), s.setName, e.Card)
 	cv.Mark(e.Filters(q))
 
 	return cv

@@ -105,10 +105,10 @@ func (e *Engine) count(items []Item) Facets {
 	}
 
 	f := Facets{
-		Houses: counts(houses, "h", HouseLabel, func(a, b string) int {
+		Houses: counts(houses, "h", e.labels.House, func(a, b string) int {
 			return cmp.Or(cmp.Compare(bucketRank(a), bucketRank(b)), cmp.Compare(a, b))
 		}),
-		Types: counts(types, "t", TypeLabel, cmp.Compare[string]),
+		Types: counts(types, "t", e.labels.Type, cmp.Compare[string]),
 		Rarities: counts(rarities, "r", func(s string) string { return s }, func(a, b string) int {
 			return cmp.Or(cmp.Compare(rarityRank(a), rarityRank(b)), cmp.Compare(a, b))
 		}),
@@ -119,7 +119,7 @@ func (e *Engine) count(items []Item) Facets {
 		Armor:     counts(armor, "ar", func(s string) string { return s }, compareNumbers),
 		Aember:    counts(aember, "a", func(s string) string { return s }, compareNumbers),
 		Keywords:  counts(keywords, "k", keywordLabel, byCount(keywords)),
-		Abilities: counts(abilities, "ab", AbilityLabel, abilityOrder),
+		Abilities: counts(abilities, "ab", e.labels.Ability, abilityOrder),
 		Traits:    counts(traits, "tr", traitLabel, byCount(traits)),
 		Artists: counts(
 			artistCounts,
@@ -211,44 +211,6 @@ func quote(v string) string {
 	return v
 }
 
-// houseLabels are the printed house names.
-var houseLabels = map[string]string{
-	"brobnar": "Brobnar", "dis": "Dis", "ekwidon": "Ekwidon", "elders": "Elders",
-	"geistoid": "Geistoid", "ironyxrebels": "Ironyx Rebels", "keyraken": "Keyraken",
-	"logos": "Logos", "mars": "Mars", "ouboros": "Ouboros", "redemption": "Redemption",
-	"sanctum": "Sanctum", "saurian": "Saurian", "shadows": "Shadows", "skyborn": "Skyborn",
-	"staralliance": "Star Alliance", "unfathomable": "Unfathomable", "untamed": "Untamed",
-	HouseNone: "Other",
-}
-
-// groupLabels are the names of the groups of the cards without a house.
-var groupLabels = map[string]string{
-	"anomaly": "Anomaly", "skybeast": "Skybeast",
-	"revenant": "Revenant", "mercenary": "Mercenary", "houseless": "Houseless",
-	"archonpower": "Archon power", "prophecy": "Prophecy", "thetide": "The Tide",
-	"reference": "Reference",
-}
-
-// GroupLabel returns the name of a group of cards without a house.
-func GroupLabel(g string) string {
-	if l, ok := groupLabels[g]; ok {
-		return l
-	}
-
-	return g
-}
-
-// HouseLabel returns the printed name of a house slug. HouseNone is
-// "Other".
-func HouseLabel(slug string) string {
-
-	if l, ok := houseLabels[slug]; ok {
-		return l
-	}
-
-	return slug
-}
-
 // AddTerm returns the query with a term added at the end.
 func AddTerm(q, term string) string {
 	q = strings.TrimSpace(q)
@@ -273,22 +235,6 @@ func byCount(m map[string]int) func(a, b string) int {
 
 func keywordLabel(k string) string {
 	return capitalize(strings.ReplaceAll(k, "-", " "))
-}
-
-// AbilityLabels are the printed names of the ability triggers.
-var AbilityLabels = map[string]string{
-	"action": "Action", "beforefight": "Before Fight", "destroyed": "Destroyed",
-	"fight": "Fight", "leavesplay": "Leaves Play", "omni": "Omni", "play": "Play",
-	"reap": "Reap", "scrap": "Scrap",
-}
-
-// AbilityLabel returns the printed name of an ability trigger.
-func AbilityLabel(a string) string {
-	if l, ok := AbilityLabels[a]; ok {
-		return l
-	}
-
-	return capitalize(a)
 }
 
 func traitLabel(t string) string {
@@ -334,16 +280,6 @@ func (e *Engine) setCodes(c *card.Card) []string {
 	}
 
 	return out
-}
-
-// TypeLabel returns a card type for people, with a capital letter: "action"
-// becomes "Action". Queries match types in any case.
-func TypeLabel(t string) string {
-	if t == "" {
-		return t
-	}
-
-	return strings.ToUpper(t[:1]) + t[1:]
 }
 
 // setLabel returns the full name of the set with the code, or the code.

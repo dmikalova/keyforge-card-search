@@ -18,6 +18,11 @@ import (
 //go:embed testdata/cards.json
 var cardsJSON string
 
+// labelsJSON are the labels of the published dataset (card.Dataset.Labels).
+//
+//go:embed testdata/labels.json
+var labelsJSON string
+
 // Dataset returns the hand-written dataset. Its sets are the sets of
 // sets.All that the cards use.
 func Dataset() (*card.Dataset, error) {
@@ -35,6 +40,9 @@ func Dataset() (*card.Dataset, error) {
 	}
 
 	ds := &card.Dataset{Version: "fixture", Cards: cards}
+	if err := json.Unmarshal([]byte(labelsJSON), &ds.Labels); err != nil {
+		return nil, fmt.Errorf("read the fixture labels: %w", err)
+	}
 
 	for _, s := range sets.All {
 		if used[s.Slug] {

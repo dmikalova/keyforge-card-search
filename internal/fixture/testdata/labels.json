@@ -1,0 +1,40 @@
+{
+  "abilities": {
+    "action": "Action",
+    "beforefight": "Before Fight",
+    "destroyed": "Destroyed",
+    "fight": "Fight",
+    "leavesplay": "Leaves Play",
+    "omni": "Omni",
+    "play": "Play",
+    "reap": "Reap",
+    "scrap": "Scrap"
+  },
+  "groups": {
+    "anomaly": "Anomaly",
+    "houseless": "Houseless",
+    "reference": "Reference",
+    "thetide": "The Tide"
+  },
+  "houses": {
+    "brobnar": "Brobnar",
+    "dis": "Dis",
+    "ekwidon": "Ekwidon",
+    "ironyxrebels": "Ironyx Rebels",
+    "logos": "Logos",
+    "mars": "Mars",
+    "sanctum": "Sanctum",
+    "saurian": "Saurian",
+    "shadows": "Shadows",
+    "staralliance": "Star Alliance",
+    "unfathomable": "Unfathomable",
+    "untamed": "Untamed"
+  },
+  "types": {
+    "action": "Action",
+    "artifact": "Artifact",
+    "creature": "Creature",
+    "reference": "Reference",
+    "upgrade": "Upgrade"
+  }
+}

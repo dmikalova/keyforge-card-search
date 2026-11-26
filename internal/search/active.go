@@ -361,15 +361,15 @@ func (e *Engine) ZeroCount(field, value string) Count {
 func (e *Engine) facetLabel(field, value string) string {
 	switch field {
 	case "house":
-		return HouseLabel(value)
+		return e.labels.House(value)
 	case "type":
-		return TypeLabel(value)
+		return e.labels.Type(value)
 	case "set":
 		return e.setLabel(value)
 	case "keyword":
 		return keywordLabel(value)
 	case "ability":
-		return AbilityLabel(value)
+		return e.labels.Ability(value)
 	case "trait":
 		return traitLabel(value)
 	}

@@ -335,18 +335,20 @@ func (v CardView) Current() PrintView {
 
 // NewCardView makes the card view. setName gives the full set name of a slug,
 // and find gives the other cards of the mentions and the threads.
-func NewCardView(c *card.Card, shown int, setName func(string) string, find Lookup) CardView {
+func NewCardView(
+	c *card.Card, shown int, labels search.Labels, setName func(string) string, find Lookup,
+) CardView {
 	v := CardView{
 		ID:    c.ID,
 		Title: c.Title,
 		House: Field{
-			Label: "House", Value: search.HouseLabel(search.HouseOf(c)),
-			Icon: HouseIcon(c.House, search.HouseLabel(c.House)),
+			Label: "House", Value: labels.House(search.HouseOf(c)),
+			Icon: HouseIcon(c.House, labels.House(c.House)),
 			Term: search.FieldTerm("house", search.HouseOf(c)),
 		},
 		Type: Field{
-			Label: "Type", Value: capitalize(c.Type),
-			Icon: TypeIcon(cardTypeKey(c), capitalize(c.Type)),
+			Label: "Type", Value: labels.Type(c.Type),
+			Icon: TypeIcon(cardTypeKey(c), labels.Type(c.Type)),
 			Term: search.FieldTerm("type", strings.ToLower(c.Type)),
 		},
 		Keywords: keywordFields(c.Keywords),
@@ -360,7 +362,7 @@ func NewCardView(c *card.Card, shown int, setName func(string) string, find Look
 
 	for _, a := range c.Abilities {
 		v.Abilities = append(v.Abilities, Field{
-			Value: search.AbilityLabel(a), Term: search.FieldTerm("ability", a),
+			Value: labels.Ability(a), Term: search.FieldTerm("ability", a),
 		})
 	}
 
