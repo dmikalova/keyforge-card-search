@@ -94,7 +94,7 @@ func TestBatchAppendsTiles(t *testing.T) {
 		t.Errorf("Content-Type = %s", ct)
 	}
 
-	for _, want := range []string{"selector #grid", "mode append", `class="tile"`, `id="sentinel"`} {
+	for _, want := range []string{"selector #grid", "mode append", `class="tile"`, `data-i="30"`, `id="sentinel"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("batch has no %q\n%s", want, body)
 		}

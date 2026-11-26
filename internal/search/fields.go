@@ -35,7 +35,6 @@ const (
 	FlagAnomaly       = "anomaly"
 	FlagReprint       = "reprint"
 	FlagHouseless     = "houseless"
-	FlagMultiHouse    = "multihouse"
 	FlagReference     = "reference"
 	FlagTokenCreature = "tokencreature"
 	FlagGigantic      = "gigantic"
@@ -217,7 +216,7 @@ func (e *Engine) flags(cards []card.Card) []query.Flag[*Entry] {
 	known := []string{FlagAnomaly, FlagReprint}
 
 	for _, name := range []string{
-		FlagHouseless, FlagMultiHouse, FlagReference, FlagTokenCreature, FlagGigantic, FlagEvilTwin,
+		FlagHouseless, FlagReference, FlagTokenCreature, FlagGigantic, FlagEvilTwin,
 	} {
 		known = append(known, name)
 		out = append(out, cardFlag(name))

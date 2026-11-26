@@ -105,10 +105,11 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		v.Err = errorView(q, err)
 	default:
-		first := res.Items[:min(len(res.Items), web.BatchSize)]
+		at, _ := strconv.Atoi(r.URL.Query().Get("at"))
+		first := res.Items[:web.FirstCount(at, len(res.Items))]
 		v.Count = len(res.Items)
 		v.Facets = web.NewFacets(q, res.Facets)
-		v.Tiles = web.NewTiles(first)
+		v.Tiles = web.NewTiles(first, 0)
 		v.Next = web.BatchURL(q, len(first), len(res.Items))
 	}
 
@@ -158,7 +159,7 @@ func (s *Server) batch(w http.ResponseWriter, r *http.Request) {
 
 	sse := datastar.NewSSE(w, r)
 	if err := sse.PatchElementTempl(
-		web.Tiles(web.NewTiles(res.Items[offset:end])),
+		web.Tiles(web.NewTiles(res.Items[offset:end], offset)),
 		datastar.WithSelectorID("grid"),
 		datastar.WithModeAppend(),
 	); err != nil {

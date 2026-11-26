@@ -23,6 +23,9 @@ type Tile struct {
 	// Anomaly is true for an anomaly printing. The tile shows the anomaly
 	// rarity mark.
 	Anomaly bool
+	// Index is the place of the tile in the results, from 0. The page keeps
+	// the index of the top tile in the URL, so a reload comes back to it.
+	Index int
 }
 
 // ErrorView is a query parse error.
@@ -67,8 +70,9 @@ type PageView struct {
 	Fuzzy bool
 }
 
-// NewTiles makes the tiles of the items.
-func NewTiles(items []search.Item) []Tile {
+// NewTiles makes the tiles of the items. The first item has the index
+// start.
+func NewTiles(items []search.Item, start int) []Tile {
 	out := make([]Tile, len(items))
 
 	for i, it := range items {
@@ -77,6 +81,7 @@ func NewTiles(items []search.Item) []Tile {
 			Image:   catalog.ImageURL(it.Printing.Image),
 			Caption: it.Set.Code + " " + it.Printing.Number,
 			Anomaly: it.Printing.Anomaly,
+			Index:   start + i,
 		}
 	}
 
@@ -209,4 +214,21 @@ func FuzzyOff(q string) bool {
 // QueryEscape escapes a query for a URL.
 func QueryEscape(q string) string {
 	return url.QueryEscape(q)
+}
+
+// MaxRestore is the most tiles that a page renders to come back to a place
+// in the results.
+const MaxRestore = 1200
+
+// FirstCount returns the number of tiles that the page renders first: one
+// batch, or the batches up to the tile at the index at and one more batch.
+// The extra batch lets the page scroll the tile to the top. The count is at
+// most MaxRestore and at most the total.
+func FirstCount(at, total int) int {
+	n := BatchSize
+	if at > 0 {
+		n = min((at/BatchSize+2)*BatchSize, MaxRestore)
+	}
+
+	return min(n, total)
 }

@@ -40,9 +40,9 @@ Grammar:
 
 Field `first` (no alias): the set of the card's first printing (`first:gr`).
 
-Flags (`is:`): `anomaly`, `reprint`, `houseless`, `multihouse`, `reference`,
-`tokencreature`, `gigantic`, `eviltwin`, and the houseless kind labels
-(`skybeast`, `revenant` …).
+Flags (`is:`): `anomaly`, `reprint`, `houseless`, `reference`, `tokencreature`,
+`gigantic`, `eviltwin`, and the houseless kind labels (`skybeast`, `revenant`
+…).
 
 Directives: `sort:` (name, set, house, type, rarity, power, armor, aember,
 enhance, random), `order:` (asc, desc), `unique:prints`, `seed:`,

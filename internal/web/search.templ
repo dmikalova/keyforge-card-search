@@ -78,7 +78,7 @@ templ facetGroup(g FacetGroup) {
 // Tiles is a run of result tiles. A batch appends it to the grid.
 templ Tiles(tiles []Tile) {
 	for _, t := range tiles {
-		<button type="button" class="tile" data-full={ t.Image } title={ t.Title + " (" + t.Caption + ")" }>
+		<button type="button" class="tile" data-i={ strconv.Itoa(t.Index) } data-full={ t.Image } title={ t.Title + " (" + t.Caption + ")" }>
 			if t.Image != "" {
 				<img src={ t.Image } alt={ t.Title } loading="lazy" decoding="async" width="300" height="420"/>
 			} else {

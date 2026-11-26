@@ -149,8 +149,65 @@
     if (e.target.id === "fuzzy") e.target.form.requestSubmit();
   });
 
+  // The place in the results. The page keeps the index of the top tile in
+  // the URL (at=N), so a reload or a back navigation comes back to it. The
+  // server renders the tiles up to that index. The parameter is not part of
+  // the query text.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+  const topTile = () => {
+    for (const t of document.querySelectorAll(".tile")) {
+      if (t.getBoundingClientRect().bottom > 0) return t;
+    }
+    return null;
+  };
+
+  const savePlace = () => {
+    const t = topTile();
+    const at = t ? Number(t.dataset.i) : 0;
+    const url = new URL(location.href);
+    const old = url.searchParams.get("at") || "0";
+    if (String(at) === old) return;
+    if (at > 0) url.searchParams.set("at", String(at));
+    else url.searchParams.delete("at");
+    history.replaceState(history.state, "", url);
+  };
+
+  let pending = 0;
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (pending) return;
+      pending = setTimeout(() => {
+        pending = 0;
+        savePlace();
+      }, 250);
+    },
+    { passive: true },
+  );
+
+  // moved is true after the user scrolls. A late layout change (a web
+  // font, the facets) can move the grid, so the page restores the place
+  // again when the fonts and images are loaded, unless the user moved.
+  let moved = false;
+  for (const ev of ["wheel", "touchmove", "keydown", "mousedown"]) {
+    window.addEventListener(ev, () => {
+      moved = true;
+    }, { passive: true, once: true });
+  }
+
+  const restorePlace = () => {
+    const at = new URLSearchParams(location.search).get("at");
+    if (!at || moved) return;
+    const t = document.querySelector(`.tile[data-i="${CSS.escape(at)}"]`);
+    if (t) window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY);
+  };
+
   document.addEventListener("DOMContentLoaded", () => {
     const n = load();
     if (n) setSize(n);
+    restorePlace();
+    document.fonts?.ready.then(restorePlace);
   });
+  window.addEventListener("load", restorePlace);
 })();
