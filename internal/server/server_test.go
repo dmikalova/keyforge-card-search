@@ -50,7 +50,7 @@ func TestPageShowsResultsAndFacets(t *testing.T) {
 	for _, want := range []string{
 		`<button type="button" class="chip-text" title="Edit"`,
 		`value="house:brobnar"`,
-		`data-signals="{&#34;draft&#34;:&#34;&#34;,&#34;q&#34;:&#34;house:brobnar&#34;}"`,
+		`data-signals="{&#34;draft&#34;:&#34;&#34;,&#34;pos&#34;:-1,&#34;q&#34;:&#34;house:brobnar&#34;}"`,
 		`class="tile"`,
 		`ageofascension/001.webp`,
 		`<h2>House</h2>`,
@@ -161,34 +161,39 @@ func TestSyntaxAndHealth(t *testing.T) {
 	}
 }
 
-func TestFuzzyBoxGoesIntoTheQuery(t *testing.T) {
-	h := handler(t)
-
-	w := get(t, h, "/?q="+url.QueryEscape("n:troll")+"&fz=1")
-	if loc := w.Header().Get("Location"); loc != "/?q="+url.QueryEscape("n:troll fuzzy:off") {
-		t.Errorf("box off: Location = %s", loc)
+func TestFormJoinsTheChipsAndTheDraft(t *testing.T) {
+	w := get(
+		t,
+		handler(t),
+		"/?q="+url.QueryEscape("n:troll")+"&d="+url.QueryEscape("h:brobnar")+"&fz=1",
+	)
+	if loc := w.Header().Get("Location"); loc != "/?q="+url.QueryEscape("n:troll h:brobnar") {
+		t.Errorf("Location = %s", loc)
 	}
 
-	w = get(t, h, "/?q="+url.QueryEscape("n:troll fuzzy:off")+"&fz=1&fuzzy=on")
-	if loc := w.Header().Get("Location"); loc != "/?q="+url.QueryEscape("n:troll") {
-		t.Errorf("box on: Location = %s", loc)
-	}
-
-	body := get(t, h, "/?q="+url.QueryEscape("n:troll fuzzy:off")).Body.String()
-	if strings.Contains(body, `id="fuzzy" name="fuzzy" type="checkbox" value="on" checked`) {
-		t.Error("the box is checked with fuzzy:off")
-	}
-
-	body = get(t, h, "/?q="+url.QueryEscape("n:troll")).Body.String()
-	if !strings.Contains(body, `type="checkbox" value="on" checked`) {
-		t.Error("the box is not checked without fuzzy:off")
+	body := get(t, handler(t), "/?q="+url.QueryEscape("n:troll")).Body.String()
+	if strings.Contains(body, `id="fuzzy"`) {
+		t.Error("the page still has the Fuzzy box")
 	}
 }
 
-func TestAnomalyTileHasTheMark(t *testing.T) {
+func TestAnomalyTileHasNoOverlay(t *testing.T) {
 	body := get(t, handler(t), "/?q="+url.QueryEscape("is:anomaly")).Body.String()
-	if !strings.Contains(body, `class="rarity-mark anomaly"`) {
-		t.Error("the anomaly tile has no anomaly mark")
+	if !strings.Contains(body, `class="tile"`) || strings.Contains(body, "rarity-mark") {
+		t.Error("the anomaly tile has an overlay, or there is no tile")
+	}
+}
+
+func TestCardParamOpensTheCardView(t *testing.T) {
+	body := get(t, handler(t), "/?card=troll-brobnar").Body.String()
+	for _, want := range []string{`id="zoom"`, `data-card="troll-brobnar"`, `id="acdata"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("page has no %q", want)
+		}
+	}
+
+	if strings.Contains(body, `id="zoom" class="zoom" hidden`) {
+		t.Error("the card view is hidden")
 	}
 }
 

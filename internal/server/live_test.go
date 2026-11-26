@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -10,7 +11,21 @@ import (
 func liveGet(t *testing.T, target, q, draft string) string {
 	t.Helper()
 
-	sig := `{"q":` + jsonString(q) + `,"draft":` + jsonString(draft) + `}`
+	return liveGetAt(t, target, q, draft, -1)
+}
+
+// liveGetAt sends a search bar operation with the draft before the chip at
+// pos (-1 for the end).
+func liveGetAt(t *testing.T, target, q, draft string, pos int) string {
+	t.Helper()
+
+	sig := `{"q":` + jsonString(
+		q,
+	) + `,"draft":` + jsonString(
+		draft,
+	) + `,"pos":` + strconv.Itoa(
+		pos,
+	) + `}`
 	sep := "?"
 	if strings.Contains(target, "?") {
 		sep = "&"
@@ -26,8 +41,11 @@ func jsonString(s string) string {
 func TestLiveOperations(t *testing.T) {
 	cases := []struct {
 		name, target, q, draft string
-		want                   []string
-		not                    []string
+		// pos is the place of the draft among the chips. The zero value
+		// means the end.
+		pos  *int
+		want []string
+		not  []string
 	}{
 		{
 			name:   "typing updates the results and keeps the signals",
@@ -88,15 +106,36 @@ func TestLiveOperations(t *testing.T) {
 			want: []string{`"draft":"power\u003e=5"`},
 		},
 		{
-			name: "the fuzzy box writes fuzzy:off", target: "/results?op=fuzzy&on=off",
-			q: "n:troll", draft: "",
-			want: []string{`fuzzy:off`, `"fuzzy":false`},
+			name: "a draft between two chips goes in its place", target: "/results?op=commit",
+			q: "house:dis house:logos", draft: "or", pos: new(1),
+			want: []string{`"q":"house:dis or house:logos"`, `"pos":-1`},
+		},
+		{
+			name:   "typing between two chips searches with the draft there",
+			target: "/results?op=type",
+			q:      "house:dis house:logos",
+			draft:  "or",
+			pos:    new(1),
+			want:   []string{`house%3Adis+or+house%3Alogos`},
+		},
+		{
+			name:   "backspace between chips edits the chip before the caret",
+			target: "/results?op=pop",
+			q:      "house:brobnar power>=5",
+			draft:  "",
+			pos:    new(1),
+			want:   []string{`"q":"power\u003e=5"`, `"draft":"house:brobnar"`, `"pos":0`},
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			body := liveGet(t, c.target, c.q, c.draft)
+			pos := -1
+			if c.pos != nil {
+				pos = *c.pos
+			}
+
+			body := liveGetAt(t, c.target, c.q, c.draft, pos)
 			for _, w := range c.want {
 				if !strings.Contains(body, w) {
 					t.Errorf("no %q in\n%s", w, body)
@@ -113,7 +152,7 @@ func TestLiveOperations(t *testing.T) {
 
 func TestCardView(t *testing.T) {
 	body := get(t, handler(t), "/card?id=troll-brobnar&p=0").Body.String()
-	for _, want := range []string{`id="zoom"`, "Troll", "Printings", "Master Vault IDs", "kfsearch.opened"} {
+	for _, want := range []string{`id="zoom"`, "Troll", "Sets", "Rarity", `kfsearch.opened("troll-brobnar")`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("card view has no %q", want)
 		}
@@ -128,3 +167,5 @@ func TestCardView(t *testing.T) {
 		t.Errorf("unknown card: %d", w.Code)
 	}
 }
+
+//go:fix inline

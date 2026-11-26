@@ -53,11 +53,23 @@ func (e *Engine) count(items []Item) Facets {
 	abilities := map[string]int{}
 	traits := map[string]int{}
 
+	// A set term matches a card that has a printing in the set, so the set
+	// facet counts each card one time in each set that it is in. The count
+	// is then the number of results of the query with the set term.
+	counted := map[*card.Card]bool{}
+
 	for _, it := range items {
+		if !counted[it.Card] {
+			counted[it.Card] = true
+
+			for _, code := range e.setCodes(it.Card) {
+				setCounts[code]++
+			}
+		}
+
 		houses[houseBucket(it.Card)]++
 		types[it.Card.Type]++
 		rarities[it.Printing.Rarity]++
-		setCounts[it.Set.Code]++
 
 		for k := range it.Card.Keywords {
 			keywords[k]++
@@ -121,8 +133,8 @@ func counts(
 
 	for i, k := range keys {
 		term := field + ":" + quote(k)
-		if f, ok := bucketFlags[k]; ok && field == "h" {
-			term = "is:" + f
+		if g, ok := strings.CutPrefix(k, groupBucket); ok && field == "h" {
+			term = FieldGroup + ":" + g
 		}
 
 		out[i] = Count{Value: k, Label: label(k), N: m[k], Term: term}
@@ -139,46 +151,35 @@ func compareNumbers(a, b string) int {
 	return cmp.Or(compareBool(ea != nil, eb != nil), cmp.Compare(na, nb), cmp.Compare(a, b))
 }
 
-// The house facet buckets of the cards without a house. A bucket selects its
-// cards with a flag, not with a house term.
-const (
-	bucketHouseless = "houseless"
-	bucketReference = "reference"
-)
-
-var bucketFlags = map[string]string{
-	bucketHouseless: FlagHouseless,
-	bucketReference: FlagReference,
-}
+// groupBucket is the prefix of the house facet bucket of a card without a
+// house: "~anomaly" for the group anomaly. The bucket selects its cards
+// with a group term, not with a house term.
+const groupBucket = "~"
 
 // houseBucket returns the house facet bucket of a card: its house, or the
-// houseless or reference bucket, or HouseNone.
+// bucket of its group (see GroupOf).
 func houseBucket(c *card.Card) string {
-	switch {
-	case c.House != "":
+	if c.House != "" {
 		return c.House
-	case c.HasFlag(FlagReference):
-		return bucketReference
-	case c.HasFlag(FlagHouseless):
-		return bucketHouseless
-	default:
-		return HouseNone
 	}
+
+	return groupBucket + GroupOf(c)
 }
 
-// bucketRank puts the houses first, then the houseless, reference, and
-// no-house buckets.
+// bucketRank puts the houses first, then the groups of the cards without a
+// house in the order of card.HouselessGroups.
 func bucketRank(b string) int {
-	switch b {
-	case bucketHouseless:
-		return 1
-	case bucketReference:
-		return 2
-	case HouseNone:
-		return 3
-	default:
+	g, ok := strings.CutPrefix(b, groupBucket)
+	if !ok {
 		return 0
 	}
+
+	i := slices.Index(card.HouselessGroups, g)
+	if i < 0 {
+		return len(card.HouselessGroups) + 1
+	}
+
+	return 1 + i
 }
 
 // codeIndex returns the position of the set with the code, or the end.
@@ -207,11 +208,33 @@ var houseLabels = map[string]string{
 	"logos": "Logos", "mars": "Mars", "ouboros": "Ouboros", "redemption": "Redemption",
 	"sanctum": "Sanctum", "saurian": "Saurian", "shadows": "Shadows", "skyborn": "Skyborn",
 	"staralliance": "Star Alliance", "unfathomable": "Unfathomable", "untamed": "Untamed",
-	HouseNone: "No house", bucketHouseless: "Houseless", bucketReference: "Reference",
+	HouseNone: "No house",
 }
 
-// HouseLabel returns the printed name of a house slug.
+// groupLabels are the names of the groups of the cards without a house.
+var groupLabels = map[string]string{
+	"anomaly": "Anomaly", "multihouse": "Multi-house", "skybeast": "Skybeast",
+	"revenant": "Revenant", "mercenary": "Mercenary", "houseless": "Houseless",
+	"archonpower": "Archon power", "prophecy": "Prophecy", "thetide": "The Tide",
+	"reference": "Reference",
+}
+
+// GroupLabel returns the name of a group of cards without a house.
+func GroupLabel(g string) string {
+	if l, ok := groupLabels[g]; ok {
+		return l
+	}
+
+	return g
+}
+
+// HouseLabel returns the printed name of a house slug, or the name of a
+// group bucket of the house facet.
 func HouseLabel(slug string) string {
+	if g, ok := strings.CutPrefix(slug, groupBucket); ok {
+		return GroupLabel(g)
+	}
+
 	if l, ok := houseLabels[slug]; ok {
 		return l
 	}
@@ -232,45 +255,6 @@ func AddTerm(q, term string) string {
 // WithSeed returns the query with a "seed:" directive added.
 func WithSeed(q string, seed uint64) string {
 	return AddTerm(q, DirSeed+":"+strconv.FormatUint(seed, 10))
-}
-
-// fuzzyOffTerm is the directive term that turns fuzzy name matching off.
-const fuzzyOffTerm = DirFuzzy + ":" + FuzzyOff
-
-// FuzzyIsOff reports whether the query has the term "fuzzy:off" at the top
-// level. It does not parse the query, so it works on a query with an error.
-func FuzzyIsOff(q string) bool {
-	off := false
-
-	for w := range strings.FieldsSeq(q) {
-		switch strings.ToLower(w) {
-		case fuzzyOffTerm:
-			off = true
-		case DirFuzzy + ":on":
-			off = false
-		}
-	}
-
-	return off
-}
-
-// SetFuzzy returns the query with fuzzy name matching on or off: it removes
-// the fuzzy directives and adds "fuzzy:off" for off.
-func SetFuzzy(q string, on bool) string {
-	var keep []string
-
-	for w := range strings.FieldsSeq(q) {
-		if l := strings.ToLower(w); l != fuzzyOffTerm && l != DirFuzzy+":on" {
-			keep = append(keep, w)
-		}
-	}
-
-	out := strings.Join(keep, " ")
-	if !on {
-		out = AddTerm(out, fuzzyOffTerm)
-	}
-
-	return out
 }
 
 // byCount orders the values by count, most first, then by name.
@@ -324,4 +308,23 @@ func abilityOrder(a, b string) int {
 	}
 
 	return cmp.Or(cmp.Compare(rank(a), rank(b)), cmp.Compare(a, b))
+}
+
+// setCodes returns the codes of the sets that a card has a printing in, one
+// time each.
+func (e *Engine) setCodes(c *card.Card) []string {
+	var out []string
+
+	for _, p := range c.Printings {
+		code := p.Set
+		if s, ok := e.SetOf(p.Set); ok {
+			code = s.Code
+		}
+
+		if !slices.Contains(out, code) {
+			out = append(out, code)
+		}
+	}
+
+	return out
 }

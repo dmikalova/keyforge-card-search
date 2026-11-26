@@ -47,17 +47,15 @@ const (
 	DirOrder  = "order"
 	DirUnique = "unique"
 	DirSeed   = "seed"
-	DirFuzzy  = query.DirFuzzy
 )
-
-// FuzzyOff is the value of the fuzzy directive that turns fuzzy name
-// matching off.
-const FuzzyOff = query.FuzzyOff
 
 // The sort keys of the sort directive.
 var sortKeys = []string{
 	"name", "set", "house", "type", "rarity", "power", "armor", "aember", "enhance", "random",
 }
+
+// FieldGroup is the field of the groups of the cards without a house.
+const FieldGroup = "group"
 
 // HouseNone is the house value of a card without a house.
 const HouseNone = "none"
@@ -91,14 +89,14 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 
 	return []query.Field[*Entry]{
 		{
-			Name: "name", Alias: "n", Kind: query.KindFuzzy, Bare: true,
+			Name: "name", Alias: "n", Kind: query.KindName, Bare: true,
 			Strings: func(en *Entry) []string {
 				return append([]string{en.Card.Title}, en.Card.Aliases...)
 			},
 		},
 		{
 			Name: "text", Alias: "x", Kind: query.KindText, Bare: true,
-			Strings: func(en *Entry) []string { return []string{en.Card.Text} },
+			Strings: func(en *Entry) []string { return []string{searchText(en.Card.Text)} },
 		},
 		{
 			Name: "flavor", Alias: "fl", Kind: query.KindText, Bare: true,
@@ -109,6 +107,18 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 		{
 			Name: "house", Alias: "h", Kind: query.KindEnum, Values: houses,
 			Strings: func(en *Entry) []string { return []string{HouseOf(en.Card)} },
+		},
+		{
+			// group is the sort group of a card without a house (GroupOf). A
+			// card with a house has no group.
+			Name: FieldGroup, Alias: "g", Kind: query.KindEnum, Values: card.HouselessGroups,
+			Strings: func(en *Entry) []string {
+				if !lastGroup(en.Card) {
+					return nil
+				}
+
+				return []string{GroupOf(en.Card)}
+			},
 		},
 		{
 			Name: "set", Alias: "s", Kind: query.KindEnum, Values: setValues,
@@ -183,11 +193,11 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 			Name: "enhance", Alias: "en", Kind: query.KindKeyed,
 			Keyed: func(en *Entry) map[string]int { return en.Card.Enhance },
 		},
-		{Name: DirSort, Kind: query.KindDirective, Values: sortKeys},
+		// The sort value is a comma list of sortKeys. Engine.Parse checks it.
+		{Name: DirSort, Kind: query.KindDirective},
 		{Name: DirOrder, Kind: query.KindDirective, Values: []string{"asc", "desc"}},
 		{Name: DirUnique, Kind: query.KindDirective, Values: []string{"prints"}},
 		{Name: DirSeed, Kind: query.KindDirective},
-		{Name: DirFuzzy, Kind: query.KindDirective, Values: []string{"on", FuzzyOff}},
 	}
 }
 
@@ -289,4 +299,18 @@ func datasetSets(cards []card.Card) []sets.Set {
 	}
 
 	return out
+}
+
+// textTokens are the icon tokens of the card text and the words that text
+// search matches for them: "x:tide" finds the cards with the tide icon.
+var textTokens = strings.NewReplacer("{tide}", "tide")
+
+// searchText returns card text for text search, with the icon tokens as
+// words.
+func searchText(s string) string {
+	if !strings.Contains(s, "{") {
+		return s
+	}
+
+	return textTokens.Replace(s)
 }

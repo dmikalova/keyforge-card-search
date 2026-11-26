@@ -77,13 +77,19 @@ code {
 
 /* Header */
 
+/* The header stays at the top of the screen, above the card view, so the
+   user can type a new query at any time. */
 .top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 16px;
   border-bottom: 1px solid var(--card);
+  background: var(--surface);
 }
 
 .brand {
@@ -121,6 +127,7 @@ code {
 /* The search bar: the chips, then the draft input, in one box. */
 .chipbar {
   flex: 1 1 260px;
+  position: relative;
   min-width: 0;
   display: flex;
   flex-wrap: wrap;
@@ -273,6 +280,9 @@ main {
 
 .facet ul {
   list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .facet a {
@@ -365,7 +375,7 @@ main {
 
 .zoom {
   position: fixed;
-  inset: 0;
+  inset: var(--top-h, 0px) 0 0 0;
   background: rgb(0 0 0 / 80%);
   display: flex;
   align-items: center;
@@ -487,29 +497,56 @@ main {
   border-color: var(--primary);
 }
 
-.printing .rarity-mark {
-  position: static;
-}
-
 .flavor {
   margin-top: 0.5rem;
   font-style: italic;
   color: var(--muted);
 }
 
-.flavor:empty {
+.flavor:empty,
+.flavor[hidden] {
   display: none;
 }
 
-.mvids {
-  margin-top: 0.75rem;
-  font-size: 0.8rem;
-  color: var(--muted);
-  overflow-wrap: anywhere;
+/* Card names in the card text and the flavor text open that card. */
+.mention {
+  color: var(--primary);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
 }
 
-.mvids summary {
-  cursor: pointer;
+/* The threads of related cards. */
+.related h3 {
+  margin-top: 1rem;
+}
+
+.related ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.related-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  width: 76px;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--on-surface);
+  text-decoration: none;
+}
+
+.related-card img {
+  width: 60px;
+  height: auto;
+  border-radius: 4px;
+}
+
+.related-card:hover span {
+  color: var(--primary);
 }
 
 /* Syntax page */
@@ -569,31 +606,38 @@ main {
   }
 }
 
-/* The anomaly rarity mark. It is a placeholder glyph until the anomaly
-   rarity icon exists. */
-.rarity-mark {
+/* The autocomplete list of the search bar. */
+.ac {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  display: grid;
-  place-items: center;
-  width: 1.6em;
-  height: 1.6em;
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--primary);
-  font-size: 0.85rem;
-  line-height: 1;
-  pointer-events: none;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  min-width: 12rem;
+  max-width: 100%;
+  list-style: none;
+  padding: 0.25rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--muted);
+  background: var(--card);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 40%);
 }
 
-.fuzzy {
-  display: flex;
-  align-items: center;
-  gap: 0.3em;
-  color: var(--muted);
+.ac[hidden] {
+  display: none;
+}
+
+.ac li {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: ui-monospace, Menlo, monospace;
   font-size: 0.9rem;
-  white-space: nowrap;
+}
+
+.ac li[aria-selected="true"],
+.ac li:hover {
+  background: var(--surface);
+  color: var(--primary);
 }
 
 .banner {
@@ -604,8 +648,10 @@ main {
   color: var(--primary);
 }
 
+/* An inset ring stays inside the row, so it does not cover the rows next
+   to it. */
 .facet a.active {
-  outline: 1px solid var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
 }
 
 .facet a.active .label {
@@ -672,7 +718,3 @@ main {
   margin-right: 0.3em;
 }
 
-.rarity-mark .ico {
-  width: 1em;
-  height: 1em;
-}

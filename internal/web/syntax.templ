@@ -47,12 +47,16 @@ templ SyntaxPage() {
 			</p>
 			<h2>Directives</h2>
 			<p>
-				<code>sort:</code> name, set, house, type, rarity, power, armor, aember, enhance, or random.
-				<code>order:desc</code> reverses the order. <code>unique:prints</code> shows each printing.
-				<code>seed:</code> fixes the random order.
-				<code>fuzzy:off</code> turns fuzzy name matching off, so <code>n:troll</code> matches only
-				names with "troll" in them. The Fuzzy box next to the query box does the same. Without a
-				<code>sort:</code>, a query with a name or a bare word sorts by the best name match.
+				<code>sort:</code> takes a list of keys: name, set, house, type, rarity, power, armor,
+				aember, enhance. Each key sorts the ties of the keys before it. A minus sign makes one key
+				descending: <a href={ templ.SafeURL(SearchURL("sort:set,-power,name")) }><code>sort:set,-power,name</code></a>.
+				<code>sort:random</code> shuffles the results, alone. <code>seed:</code> fixes the random order.
+				<code>order:desc</code> reverses the whole order. <code>unique:prints</code> shows each printing.
+				Without a <code>sort:</code>, a query with a name or a bare word sorts by the best name match:
+				the whole name, then the start of the name, then the start of a word, then the rest.
+				The sort by house puts the cards without a house last, in groups: anomalies, multi-house
+				cards, the houseless kinds, then the reference cards. <code>group:anomaly</code> selects one
+				group.
 			</p>
 			<h2>Keys</h2>
 			<table>
@@ -63,7 +67,10 @@ templ SyntaxPage() {
 					@row("Enter", "Open the card.")
 					@row("r", "Show a random card from the results.")
 					@row("+ -", "Make the cards larger or smaller.")
-					@row("Backspace", "In an empty query box, edit the last term.")
+					@row("Backspace", "In an empty query box, edit the term before the caret.")
+					@row("← →", "In an empty query box, move between the terms, to type a term such as OR there.")
+					@row("⌘A, Ctrl+A", "In the query box, select the whole query as text, to copy it.")
+					@row("Tab, Enter", "Take the suggestion of the autocomplete list.")
 					@row("?", "Show this page.")
 				</tbody>
 			</table>

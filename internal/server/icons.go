@@ -19,9 +19,10 @@ var iconPathRe = regexp.MustCompile(`^(house|rarity|set|stat|type)/[a-z0-9]+\.(s
 // maxIcon is the largest icon that the proxy reads.
 const maxIcon = 1 << 20
 
-// iconTTL is the time that the proxy keeps an icon. The bucket gives the
-// icons a cache time of one day.
-const iconTTL = 24 * time.Hour
+// iconTTL is the time that the proxy and the browsers keep an icon. It is
+// short, so a fixed icon shows soon. A new deploy starts with an empty
+// cache.
+const iconTTL = time.Hour
 
 // iconProxy serves the published icons from the site's own origin. The page
 // draws an SVG icon as a CSS mask, and a browser loads a mask image from
@@ -72,7 +73,7 @@ func (p *iconProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", ic.ctype)
-	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
 	_, _ = w.Write(ic.body)
 }
 

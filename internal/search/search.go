@@ -130,12 +130,21 @@ func (e *Engine) Schema() query.Schema {
 
 // Parse parses a query.
 func (e *Engine) Parse(src string) (*query.Query, error) {
-	return e.reg.Parse(src)
+	q, err := e.reg.Parse(src)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := normalizeSort(q); err != nil {
+		return nil, err
+	}
+
+	return q, nil
 }
 
 // Search parses and runs a query. A parse error is a *query.Error.
 func (e *Engine) Search(src string) (*Result, error) {
-	q, err := e.reg.Parse(src)
+	q, err := e.Parse(src)
 	if err != nil {
 		return nil, err
 	}
@@ -331,15 +340,18 @@ func isDirective(q *query.Query, name, value string) bool {
 	return ok && v == value
 }
 
-// sortItems puts the items in the order of the query. Without a sort
+// sortItems puts the items in the order of the query. The sort directive is
+// a comma list of keys (see sortKeys). Each key sorts the ties of the keys
+// before it, and byDefault sorts the last ties. A "-" before a key makes it
+// descending. "order:desc" reverses the whole order. Without a sort
 // directive, a query with name terms or bare words sorts by name match
-// quality. Otherwise the order is house and name, with reference and
-// houseless cards last.
+// quality, and other queries sort by byDefault.
 func (e *Engine) sortItems(q *query.Query, items []Item) error {
-	key, hasSort := q.Directive(DirSort)
+	value, hasSort := q.Directive(DirSort)
 	desc := isDirective(q, DirOrder, "desc")
+	keys := sortList(value)
 
-	if key == "random" {
+	if len(keys) == 1 && keys[0].name == SortRandom {
 		v, ok := q.Directive(DirSeed)
 		if !ok {
 			return ErrNoSeed
@@ -358,7 +370,7 @@ func (e *Engine) sortItems(q *query.Query, items []Item) error {
 	}
 
 	if !hasSort {
-		if scores, ok := e.fuzzyScores(q, items); ok {
+		if scores, ok := e.nameScores(q, items); ok {
 			slices.SortStableFunc(items, func(a, b Item) int {
 				return cmp.Or(cmp.Compare(scores[b.Card], scores[a.Card]), byDefault(a, b))
 			})
@@ -367,30 +379,76 @@ func (e *Engine) sortItems(q *query.Query, items []Item) error {
 		}
 	}
 
-	by := sorters[key]
-	if by == nil {
-		by = byDefault
-	}
-
 	slices.SortStableFunc(items, func(a, b Item) int {
-		c := by(a, b)
+		c := 0
+
+		for _, k := range keys {
+			if c = sorters[k.name](a, b); c != 0 {
+				if k.desc {
+					c = -c
+				}
+
+				break
+			}
+		}
+
+		c = cmp.Or(c, byDefault(a, b))
 		if desc {
 			c = -c
 		}
 
-		return cmp.Or(c, byDefault(a, b))
+		return c
 	})
 
 	return nil
 }
 
-// fuzzyScores returns the name match quality of each item, and false if
+// byHouse orders the cards with a house by house, then the cards without a
+// house in the order of their groups (card.HouselessGroups).
+func byHouse(a, b Item) int {
+	return cmp.Or(
+		cmp.Compare(groupRank(a.Card), groupRank(b.Card)),
+		cmp.Compare(a.Card.House, b.Card.House),
+	)
+}
+
+// groupRank is 0 for a card with a house. A card without a house ranks
+// after it, in the order of card.HouselessGroups. A card with an unknown
+// group, or with no group, ranks as "houseless", or as "reference" if it is
+// a reference card.
+func groupRank(c *card.Card) int {
+	if !lastGroup(c) {
+		return 0
+	}
+
+	i := slices.Index(card.HouselessGroups, GroupOf(c))
+	if i < 0 {
+		i = slices.Index(card.HouselessGroups, "houseless")
+	}
+
+	return 1 + i
+}
+
+// GroupOf returns the sort group of a card without a house: the card's
+// group from the dataset, or "reference" or "houseless".
+func GroupOf(c *card.Card) string {
+	switch {
+	case c.Group != "":
+		return c.Group
+	case c.HasFlag(FlagReference):
+		return "reference"
+	default:
+		return "houseless"
+	}
+}
+
+// nameScores returns the name match quality of each item, and false if
 // the query has no name terms or bare words.
-func (e *Engine) fuzzyScores(q *query.Query, items []Item) (map[*card.Card]int, bool) {
+func (e *Engine) nameScores(q *query.Query, items []Item) (map[*card.Card]int, bool) {
 	scores := map[*card.Card]int{}
 
 	for _, it := range items {
-		s, ok := e.reg.FuzzyRank(q, &Entry{Card: it.Card})
+		s, ok := e.reg.NameRank(q, &Entry{Card: it.Card})
 		if !ok {
 			return nil, false
 		}
@@ -401,12 +459,12 @@ func (e *Engine) fuzzyScores(q *query.Query, items []Item) (map[*card.Card]int, 
 	return scores, len(items) > 0
 }
 
-// byDefault orders by house and name, with reference and houseless cards
-// last, then by set.
+// byDefault orders by house and name: the cards with a house first, then
+// the cards without a house in the order of their groups
+// (card.HouselessGroups), then by set.
 func byDefault(a, b Item) int {
 	return cmp.Or(
-		compareBool(lastGroup(a.Card), lastGroup(b.Card)),
-		cmp.Compare(a.Card.House, b.Card.House),
+		byHouse(a, b),
 		cmp.Compare(foldedOf(a.Card), foldedOf(b.Card)),
 		cmp.Compare(a.Card.ID, b.Card.ID),
 		cmp.Compare(a.SetIndex, b.SetIndex),
@@ -422,7 +480,7 @@ var sorters = map[string]func(a, b Item) int{
 			cmp.Compare(a.Printing.Number, b.Printing.Number),
 		)
 	},
-	"house": func(a, b Item) int { return cmp.Compare(a.Card.House, b.Card.House) },
+	"house": byHouse,
 	"type":  func(a, b Item) int { return cmp.Compare(a.Card.Type, b.Card.Type) },
 	"rarity": func(a, b Item) int {
 		return cmp.Compare(rarityRank(a.Printing.Rarity), rarityRank(b.Printing.Rarity))

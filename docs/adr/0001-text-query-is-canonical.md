@@ -23,7 +23,7 @@ Grammar:
 
 | Field   | Alias | Type                                          |
 | ------- | ----- | --------------------------------------------- |
-| name    | n     | fuzzy text                                    |
+| name    | n     | name: a substring, ranked by match quality    |
 | text    | x     | text                                          |
 | flavor  | fl    | text                                          |
 | house   | h     | enum                                          |
@@ -44,9 +44,11 @@ Flags (`is:`): `anomaly`, `reprint`, `houseless`, `reference`, `tokencreature`,
 `gigantic`, `eviltwin`, and the houseless kind labels (`skybeast`, `revenant`
 …).
 
-Directives: `sort:` (name, set, house, type, rarity, power, armor, aember,
-enhance, random), `order:` (asc, desc), `unique:prints`, `seed:`,
-`fuzzy:` (on, off).
+Field `group` (alias `g`): the group of a card without a house (`group:anomaly`).
+
+Directives: `sort:` (a comma list of name, set, house, type, rarity, power,
+armor, aember, enhance, with `-` for a descending key; or random alone),
+`order:` (asc, desc), `unique:prints`, `seed:`.
 
 A comma list is an OR of the values: `s:aoa,wc` is `(s:aoa or s:wc)`. Enum
 fields, `is:`, and the keys of `k:` and `en:` take a list.
@@ -63,14 +65,18 @@ Rules:
 - `is:anomaly` gives the cards with an anomaly printing. `is:reprint` gives the
   cards in more than one set. `first:gr` gives the cards that are new in Grim
   Reminders.
-- Name search is a fuzzy subsequence match. It matches the folded name and the
-  aliases. The match tiers, from the best: the whole name, a prefix, a match
-  at a word start, a contiguous match, then scattered letters. `fuzzy:off`
-  makes it a substring match.
+- Name search is a substring match on the normalized name (no case,
+  diacritics, spaces, or punctuation) and the aliases. The match tiers, from
+  the best: the whole name, a prefix, a match at a word start, then a match
+  inside a word. A shorter name ranks higher inside a tier.
 - If the query has a name term or a bare word and no `sort:`, the name match
   quality sets the order.
-- The default sort is house, then name. Reference cards and houseless cards
-  sort after all other cards, unless the query asks for them.
+- The default sort is house, then name. The cards without a house sort after
+  the other cards, in the order of their groups (`card.HouselessGroups`).
+  Reference cards are last.
+- `sort:` keys sort in order: each key sorts the ties of the keys before it,
+  and the default sort sorts the last ties. `order:desc` reverses the whole
+  order.
 - Power X does not match a numeric comparison.
 
 ## Consequences

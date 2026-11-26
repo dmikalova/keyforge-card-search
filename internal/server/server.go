@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -83,21 +84,31 @@ func queryOf(r *http.Request) string {
 func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	q := queryOf(r)
 
-	// The query form sends the chips as q, the draft as d, fz=1, and the
-	// Fuzzy box. Join them and put the box's state in the query, so the URL
-	// holds it.
+	// The query form sends the chips as q, the draft as d, and fz=1. Join
+	// them, so the URL holds the whole query.
 	if r.URL.Query().Get("fz") == "1" {
 		if d := strings.TrimSpace(r.URL.Query().Get("d")); d != "" {
 			q = search.AddTerm(q, d)
 		}
-		on := r.URL.Query().Get("fuzzy") == "on"
-		http.Redirect(w, r, web.SearchURL(search.SetFuzzy(q, on)), http.StatusSeeOther)
+
+		http.Redirect(w, r, web.SearchURL(q), http.StatusSeeOther)
 
 		return
 	}
 
 	e := s.src.Engine()
-	v := web.PageView{Query: q, Missing: s.src.Missing()}
+	v := web.PageView{
+		Query:    q,
+		Missing:  s.src.Missing(),
+		Complete: web.CompleteJSON(e.Completions()),
+	}
+
+	// card=ID opens the card view of the card, so a link to a card and a
+	// reload with the card view open work.
+	if c := e.Card(r.URL.Query().Get("card")); c != nil {
+		cv := web.NewCardView(c, defaultPrint(c), s.setCode, e.Card)
+		v.Card = &cv
+	}
 
 	if chips, err := e.Chips(q); err == nil {
 		v.Chips = web.NewChips(chips)
@@ -336,4 +347,25 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	}); err != nil {
 		s.log.Warn("write the health", "error", err)
 	}
+}
+
+// setCode returns the code of a set slug, or the slug.
+func (s *Server) setCode(slug string) string {
+	if set, ok := s.src.Engine().SetOf(slug); ok {
+		return set.Code
+	}
+
+	return slug
+}
+
+// defaultPrint returns the index of a card's default printing: the newest
+// printing that is not an anomaly, or the newest printing.
+func defaultPrint(c *card.Card) int {
+	for i, v := range slices.Backward(c.Printings) {
+		if !v.Anomaly {
+			return i
+		}
+	}
+
+	return max(len(c.Printings)-1, 0)
 }

@@ -25,9 +25,6 @@ type Tile struct {
 	Image string
 	// Caption is the set code and the number, for example "GR 239".
 	Caption string
-	// Anomaly is true for an anomaly printing. The tile shows the anomaly
-	// rarity mark.
-	Anomaly bool
 	// ID is the card ID, and Print is the index of the shown printing in the
 	// card's printings. A click opens the card view with them.
 	ID    string
@@ -103,17 +100,23 @@ type PageView struct {
 	Results
 	// Missing is true when the card dataset is not published yet.
 	Missing bool
+	// Complete is the JSON of the search bar completions.
+	Complete string
+	// Card is the card view that the page opens, from the URL (card=ID),
+	// or nil.
+	Card *CardView
 }
 
-// Signals returns the Datastar signals of the page: the committed query and
-// the draft.
+// Signals returns the Datastar signals of the page: the committed query,
+// the draft, and the place of the draft among the chips.
 func (v PageView) Signals() string {
 	return SignalsJSON(strings.Join(chipTexts(v.Chips), " "), v.Draft)
 }
 
-// SignalsJSON returns the Datastar signals object.
+// SignalsJSON returns the Datastar signals object. The draft goes at the
+// end of the chips (pos -1).
 func SignalsJSON(q, draft string) string {
-	b, err := json.Marshal(map[string]string{"q": q, "draft": draft})
+	b, err := json.Marshal(map[string]any{"q": q, "draft": draft, "pos": -1})
 	if err != nil {
 		return "{}"
 	}
@@ -152,7 +155,6 @@ func NewTiles(items []search.Item, start int) []Tile {
 			Title:   it.Card.Title,
 			Image:   catalog.ImageURL(it.Printing.Image),
 			Caption: it.Set.Code + " " + it.Printing.Number,
-			Anomaly: it.Printing.Anomaly,
 			Index:   start + i,
 		}
 	}
@@ -269,10 +271,15 @@ type CardView struct {
 	Abilities string
 	Enhance   string
 	Flags     string
+	// Rarities are the distinct rarities of the printings, oldest first.
+	Rarities []Field
 	// Text is the card text, one line in each element, with the trigger
-	// lists bold.
-	Text      [][]TextPart
-	Printings []PrintView
+	// lists bold and the names of other cards as links.
+	Text [][]TextPart
+	// Sets are the printings: the set and the number.
+	Sets []PrintView
+	// Related are the threads of related cards.
+	Related []RelatedView
 	// Print is the index of the shown printing.
 	Print int
 }
@@ -288,25 +295,41 @@ type PrintView struct {
 	Index   int
 	Label   string
 	SetIcon Icon
-	RarIcon Icon
-	Rarity  string
-	Anomaly bool
 	Image   string
-	Flavor  string
-	MVIDs   string
+	// Flavor is the flavor text, one line in each element, with the names
+	// of other cards as links. An attribution ("—Name") is its own line.
+	Flavor [][]TextPart
 }
+
+// RelatedView is one thread of related cards in the card view.
+type RelatedView struct {
+	Label string
+	Cards []RelatedCard
+}
+
+// RelatedCard is a card in a thread. A click opens it in the card view.
+type RelatedCard struct {
+	ID, Title string
+	// Image is the thumbnail URL. It can be empty.
+	Image string
+}
+
+// Lookup finds a card by ID for the card view. It returns nil for an
+// unknown ID.
+type Lookup func(id string) *card.Card
 
 // Current returns the shown printing.
 func (v CardView) Current() PrintView {
-	if v.Print >= 0 && v.Print < len(v.Printings) {
-		return v.Printings[v.Print]
+	if v.Print >= 0 && v.Print < len(v.Sets) {
+		return v.Sets[v.Print]
 	}
 
 	return PrintView{}
 }
 
-// NewCardView makes the card view. setName gives the set code of a slug.
-func NewCardView(c *card.Card, shown int, setName func(string) string) CardView {
+// NewCardView makes the card view. setName gives the set code of a slug,
+// and find gives the other cards of the mentions and the threads.
+func NewCardView(c *card.Card, shown int, setName func(string) string, find Lookup) CardView {
 	v := CardView{
 		ID:        c.ID,
 		Title:     c.Title,
@@ -336,24 +359,44 @@ func NewCardView(c *card.Card, shown int, setName func(string) string) CardView 
 
 	for line := range strings.SplitSeq(c.Text, "\n") {
 		if line = strings.TrimSpace(line); line != "" {
-			v.Text = append(v.Text, TextParts(line))
+			v.Text = append(v.Text, IconParts(LinkParts(TextParts(line), c.Mentions, c.ID)))
 		}
 	}
 
 	for i, p := range c.Printings {
-		v.Printings = append(v.Printings, PrintView{
+		v.Sets = append(v.Sets, PrintView{
 			Index:   i,
 			Label:   setName(p.Set) + " " + p.Number,
 			SetIcon: SetIcon(p.Set, setName(p.Set)),
-			RarIcon: RarityIcon(printRarity(p)),
-			Rarity:  p.Rarity,
-			Anomaly: p.Anomaly,
 			Image:   catalog.ImageURL(p.Image),
-			Flavor:  p.Flavor,
-			MVIDs:   strings.Join(p.MVIDs, " "),
+			Flavor:  flavorLines(p.Flavor, c),
 		})
+
+		r := printRarity(p)
+		if !slices.ContainsFunc(
+			v.Rarities,
+			func(f Field) bool { return f.Value == rarityLabel(r) },
+		) {
+			v.Rarities = append(
+				v.Rarities,
+				Field{Label: "Rarity", Value: rarityLabel(r), Icon: RarityIcon(r)},
+			)
+		}
 	}
 
+	for _, rel := range c.Related {
+		rv := RelatedView{Label: rel.Label}
+
+		for _, id := range rel.Cards {
+			if o := find(id); o != nil && o.ID != c.ID {
+				rv.Cards = append(rv.Cards, RelatedCard{ID: o.ID, Title: o.Title, Image: thumb(o)})
+			}
+		}
+
+		if len(rv.Cards) > 0 {
+			v.Related = append(v.Related, rv)
+		}
+	}
 	return v
 }
 
@@ -405,7 +448,12 @@ type syntaxField struct {
 }
 
 var syntaxFields = []syntaxField{
-	{"name", "n", "n:anthony", "Fuzzy: the letters in order. Also matches the aliases."},
+	{
+		"name",
+		"n",
+		"n:anthony",
+		"Part of the name. Spaces and punctuation do not matter. Also matches the aliases.",
+	},
 	{"text", "x", `x:"steal 2"`, "The card text."},
 	{"flavor", "fl", "fl:smash", "The flavor text."},
 	{"house", "h", "h:staralliance", "h:none gives the cards without a house."},
@@ -448,11 +496,6 @@ func barStyle(percent int) templ.SafeCSS {
 	return templ.SafeCSS("width:" + strconv.Itoa(percent) + "%")
 }
 
-// FuzzyOff reports whether the query turns fuzzy name matching off.
-func FuzzyOff(q string) bool {
-	return search.FuzzyIsOff(q)
-}
-
 // QueryEscape escapes a query for a URL.
 func QueryEscape(q string) string {
 	return url.QueryEscape(q)
@@ -472,7 +515,7 @@ func action(op string, params ...string) string {
 
 // MaxRestore is the most tiles that a page renders to come back to a place
 // in the results.
-const MaxRestore = 1200
+const MaxRestore = 6000
 
 // FirstCount returns the number of tiles that the page renders first: one
 // batch, or the batches up to the tile at the index at and one more batch.
@@ -544,4 +587,75 @@ func blankIcons(links []FacetLink) {
 			links[i].Icon.Blank = true
 		}
 	}
+}
+
+// rarityLabel returns the name of a rarity icon key: "anomaly" becomes
+// "Anomaly".
+func rarityLabel(r string) string {
+	return capitalize(r)
+}
+
+// thumb returns the image URL of a card's default printing: the newest
+// printing that is not an anomaly, or the newest printing.
+func thumb(c *card.Card) string {
+	for _, p := range slices.Backward(c.Printings) {
+		if !p.Anomaly && p.Image != "" {
+			return catalog.ImageURL(p.Image)
+		}
+	}
+
+	for _, p := range slices.Backward(c.Printings) {
+		if p.Image != "" {
+			return catalog.ImageURL(p.Image)
+		}
+	}
+
+	return ""
+}
+
+// chipOrder is the flex order of a chip. The draft input has the odd order
+// before the chip that follows it, so it can sit between two chips.
+func chipOrder(i int) templ.SafeCSS {
+	return templ.SafeCSS("order:" + strconv.Itoa(2*i))
+}
+
+// CardURL returns the page URL that opens the card view of a card.
+func CardURL(id string) string {
+	return "/?card=" + url.QueryEscape(id)
+}
+
+// CompleteJSON returns the completions as JSON for the page.
+func CompleteJSON(c search.Completions) string {
+	b, err := json.Marshal(c)
+	if err != nil {
+		return "{}"
+	}
+
+	return string(b)
+}
+
+// BarSignalsJSON returns the Datastar signals of the search bar after an
+// operation: the chips, the draft, and the place of the draft (-1 for the
+// end).
+func BarSignalsJSON(q, draft string, pos int) string {
+	b, err := json.Marshal(map[string]any{"q": q, "draft": draft, "pos": pos})
+	if err != nil {
+		return "{}"
+	}
+
+	return string(b)
+}
+
+// flavorLines splits flavor text into lines, with the names of other cards
+// as links.
+func flavorLines(flavor string, c *card.Card) [][]TextPart {
+	var out [][]TextPart
+
+	for line := range strings.SplitSeq(flavor, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			out = append(out, LinkParts([]TextPart{{Text: line}}, c.Mentions, c.ID))
+		}
+	}
+
+	return out
 }

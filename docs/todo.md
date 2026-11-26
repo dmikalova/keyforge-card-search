@@ -18,7 +18,8 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 - [x] Write the lexer, the parser, and the AST (ADR 0001).
 - [x] Write the field registry and register the card fields (`internal/search`).
 - [x] Write the in-memory evaluator.
-- [x] Write the fuzzy name match with match quality.
+- [x] Write the name match with match quality. Fuzzy matching is gone: a
+  name term is a substring match.
 - [x] Add golden tests and a Go fuzz test for the parser. Add table tests for the
   evaluator with a small set of fixture cards.
 
@@ -26,20 +27,30 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 
 - [x] Read the keyforge-data dataset from the public bucket at run time, and
   reload it when it changes.
-- [x] Comma lists, card-level terms, match tiers, and the Fuzzy box.
-- [x] Replace the anomaly mark placeholder (⚡) with the anomaly rarity icon.
+- [x] Comma lists, card-level terms, and match tiers.
+- [x] No overlays on the tiles. The anomaly rarity icon is in the card view
+  and the rarity facet only.
 - [x] Page layout with the keyforge.cards purple and orange theme.
 - [x] The query box. Show parse errors at the token.
-- [ ] Autocomplete after `field:` and for field names.
+- [x] Autocomplete after `field:` and for field names, in the browser.
+- [x] The caret can go between two chips (arrow keys or a click), to add a
+  term such as OR there. Cmd+A or Ctrl+A selects the whole query as text.
+  A paste makes chips.
 - [x] The search bar with chips: one chip for each top-level term. The results
   change as the user types. Enter makes the draft into chips. A chip click
   edits the chip, and its × removes it. The builder dropdown is gone.
 - [x] The facet values toggle their terms, with spread bars for each facet.
 - [x] Keyword, ability (`ab:`), and trait facets.
-- [x] The card view shows every field of the card and each printing.
+- [x] The card view shows every field of the card, the sets, the related
+  cards, and links to the cards that the text names. The URL holds the open
+  card (`card=ID`), so a reload and the back button work.
+- [x] The header stays on the screen, and the card view opens below it.
+- [x] `sort:` takes a comma list of keys, with `-` for a descending key.
+- [x] The house facet groups the cards without a house (`group:`).
 - [x] House, type, rarity, and set icons in the facets, the chips, and the
   card view. The site serves the icons at /icons/ from the public bucket.
-- [ ] Minimum and maximum for power, armor, and aember. Sort and order controls.
+- [ ] Minimum and maximum for power, armor, and aember. Sort and order
+  controls in the page.
 - [x] The grid with batches, the sentinel, and lazy images (ADR 0002).
 - [x] The card size slider.
 - [x] The zoom view (click or tap to open and close).

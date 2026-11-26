@@ -10,7 +10,18 @@ templ SearchPage(v PageView) {
 				<p class="banner" role="status">The card dataset is not published yet. Check back soon.</p>
 			}
 			@ResultsView(v.Results)
-			<div id="zoom" class="zoom" hidden></div>
+			if v.Card != nil {
+				@Zoom(*v.Card)
+			} else {
+				<div id="zoom" class="zoom" hidden></div>
+			}
+			<div id="acdata" data-json={ v.Complete } hidden></div>
+			<button
+				id="cardload"
+				type="button"
+				hidden
+				data-on:click="@get('/card?id=' + encodeURIComponent(el.dataset.id) + '&p=' + (el.dataset.p || 0))"
+			></button>
 		</main>
 	}
 }
@@ -106,11 +117,6 @@ templ Tiles(tiles []Tile) {
 			} else {
 				<span class="noimage">{ t.Title }</span>
 			}
-			if t.Anomaly {
-				<span class="rarity-mark anomaly" title="Anomaly">
-					@icon(RarityIcon("anomaly"))
-				</span>
-			}
 		</button>
 	}
 }
@@ -126,9 +132,10 @@ templ Sentinel(next string) {
 }
 
 // Zoom is the card view: the image of one printing and every field of the
-// card. A click on a printing shows its image.
+// card. A click on a set shows that printing's image and flavor text. A
+// click on a card name or a related card opens that card.
 templ Zoom(v CardView) {
-	<div id="zoom" class="zoom" role="dialog" aria-modal="true" aria-label={ v.Title }>
+	<div id="zoom" class="zoom" role="dialog" aria-modal="true" aria-label={ v.Title } data-card={ v.ID }>
 		<div class="zoom-card">
 			<figure class="zoom-image">
 				if v.Current().Image != "" {
@@ -147,6 +154,13 @@ templ Zoom(v CardView) {
 				<dl>
 					@iconRow("House", v.House, v.HouseIcon)
 					@iconRow("Type", v.Type, v.TypeIcon)
+					for i, r := range v.Rarities {
+						if i == 0 {
+							@iconRow(plural(len(v.Rarities), "Rarity", "Rarities"), r.Value, r.Icon)
+						} else {
+							@iconRow("", r.Value, r.Icon)
+						}
+					}
 					@dlRow("Traits", v.Traits)
 					for _, f := range v.Stats {
 						@iconRow(f.Label, f.Value, f.Icon)
@@ -160,40 +174,68 @@ templ Zoom(v CardView) {
 					<div class="zoom-text">
 						for _, line := range v.Text {
 							<p>
-								for _, part := range line {
-									if part.Bold {
-										<strong>{ part.Text }</strong>
-									} else {
-										{ part.Text }
-									}
-								}
+								@textParts(line)
 							</p>
 						}
 					</div>
 				}
-				<h3>Printings</h3>
+				<h3>{ plural(len(v.Sets), "Set", "Sets") }</h3>
 				<ul class="printings">
-					for _, p := range v.Printings {
+					for _, p := range v.Sets {
 						<li>
-							<button type="button" class={ "printing", templ.KV("active", p.Index == v.Print) } data-img={ p.Image } data-flavor={ p.Flavor }>
+							<button type="button" class={ "printing", templ.KV("active", p.Index == v.Print) } data-img={ p.Image } data-print={ itoa(p.Index) }>
 								@icon(p.SetIcon)
 								<span>{ p.Label }</span>
-								@icon(p.RarIcon)
-								<span class="muted">{ p.Rarity }</span>
 							</button>
 						</li>
 					}
 				</ul>
-				<p id="zoom-flavor" class="flavor">{ v.Current().Flavor }</p>
-				<details class="mvids">
-					<summary>Master Vault IDs</summary>
-					for _, p := range v.Printings {
-						<p><span class="muted">{ p.Label }:</span> <code>{ p.MVIDs }</code></p>
-					}
-				</details>
+				for _, p := range v.Sets {
+					<p class="flavor" data-print={ itoa(p.Index) } hidden?={ p.Index != v.Print }>
+						for i, line := range p.Flavor {
+							if i > 0 {
+								<br/>
+							}
+							@textParts(line)
+						}
+					</p>
+				}
+				for _, rel := range v.Related {
+					<section class="related">
+						<h3>{ rel.Label }</h3>
+						<ul>
+							for _, rc := range rel.Cards {
+								<li>
+									<a class="related-card" href={ templ.SafeURL(CardURL(rc.ID)) } data-card={ rc.ID } title={ rc.Title }>
+										if rc.Image != "" {
+											<img src={ rc.Image } alt="" loading="lazy" width="60" height="84"/>
+										}
+										<span>{ rc.Title }</span>
+									</a>
+								</li>
+							}
+						</ul>
+					</section>
+				}
 			</div>
 		</div>
 	</div>
+}
+
+// textParts writes runs of card text: bold trigger lists, links to the
+// named cards, and plain text. templ escapes every run.
+templ textParts(parts []TextPart) {
+	for _, part := range parts {
+		if part.Icon.URL != "" {
+			<span class="ico mask text-icon" style={ part.Icon.MaskStyle() } role="img" aria-label={ part.Icon.Label } title={ part.Icon.Label }></span>
+		} else if part.Bold {
+			<strong>{ part.Text }</strong>
+		} else if part.Link != "" {
+			<a class="mention" href={ templ.SafeURL(CardURL(part.Link)) } data-card={ part.Link }>{ part.Text }</a>
+		} else {
+			{ part.Text }
+		}
+	}
 }
 
 templ dlRow(label, value string) {

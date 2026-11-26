@@ -68,8 +68,9 @@ func TestSearchMatches(t *testing.T) {
 		{"first:vm23", nil},
 		{"h:mars,dis t:action,artifact", []string{"gateway-to-dis-dis", "mothergun-mars"}},
 		{"is:eviltwin,gigantic", []string{"krump-brobnar-evil-twin", "ultra-gravitron-logos"}},
-		{"n:mmc fuzzy:off", nil},
-		{"n:mimic fuzzy:off", []string{"mimic-gel-logos"}},
+		{"n:mmc", nil},
+		{"n:mimic", []string{"mimic-gel-logos"}},
+		{"n:mimi-c", []string{"mimic-gel-logos"}},
 		{"k:assault>=2", []string{"ancient-bear-untamed"}},
 		{"k:elusive h:mars", []string{"agent-hoo-man-mars"}},
 		{"en:capture>=1", []string{"adaptoid-logos"}},
@@ -192,13 +193,13 @@ func TestSortDirectives(t *testing.T) {
 	}
 }
 
-func TestFuzzyNameRanks(t *testing.T) {
+func TestNameRanks(t *testing.T) {
 	r, err := engine(t).Search("n:troll")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if got := r.Items[0].Card.ID; got != "troll-brobnar" || len(r.Items) < 2 {
+	if got := r.Items[0].Card.ID; got != "troll-brobnar" {
 		t.Errorf("best match = %s of %d, want troll-brobnar first", got, len(r.Items))
 	}
 }
@@ -232,8 +233,10 @@ func TestFacets(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Troll is in CotA and VM23, so the set facet counts it in both.
 	sets := r.Facets.Sets
-	if len(sets) != 2 || sets[0].Term != "s:MM" || sets[1].Term != "s:VM23" {
+	if len(sets) != 3 || sets[0].Term != "s:CotA" || sets[1].Term != "s:MM" ||
+		sets[2].Term != "s:VM23" {
 		t.Errorf("sets = %+v", sets)
 	}
 }
@@ -288,8 +291,8 @@ func TestNameRanksWithOtherTerms(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(r.Items) < 2 || r.Items[0].Card.ID != "troll-brobnar" {
-		t.Errorf("n:troll t:creature = %v, want troll-brobnar first of several", ids(r))
+	if len(r.Items) == 0 || r.Items[0].Card.ID != "troll-brobnar" {
+		t.Errorf("n:troll t:creature = %v, want troll-brobnar first", ids(r))
 	}
 
 	r, err = engine(t).Search("troll")
@@ -313,32 +316,8 @@ func TestHouseFacetBuckets(t *testing.T) {
 		got = append(got, c.Label+"="+c.Term)
 	}
 
-	want := []string{"Houseless=is:houseless", "Reference=is:reference"}
+	want := []string{"Houseless=group:houseless", "Reference=group:reference"}
 	if !slices.Equal(got, want) {
 		t.Errorf("house facet = %v, want %v", got, want)
-	}
-}
-
-func TestFuzzySwitch(t *testing.T) {
-	cases := []struct {
-		q    string
-		on   bool
-		want string
-	}{
-		{"n:troll", false, "n:troll fuzzy:off"},
-		{"n:troll fuzzy:off", true, "n:troll"},
-		{"n:troll FUZZY:OFF", false, "n:troll fuzzy:off"},
-		{"", false, "fuzzy:off"},
-	}
-
-	for _, c := range cases {
-		got := SetFuzzy(c.q, c.on)
-		if got != c.want {
-			t.Errorf("SetFuzzy(%q, %t) = %q, want %q", c.q, c.on, got, c.want)
-		}
-
-		if FuzzyIsOff(got) == c.on {
-			t.Errorf("FuzzyIsOff(%q) = %t", got, !c.on)
-		}
 	}
 }

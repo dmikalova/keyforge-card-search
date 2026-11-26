@@ -2,9 +2,11 @@ package web
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/dmikalova/keyforge-data/card"
 )
 
 // iconBase is the icon proxy of the site (server.IconOrigin). The page draws
@@ -149,12 +151,19 @@ func chipIcon(text string) Icon {
 type TextPart struct {
 	Text string
 	Bold bool
+	// Link is the ID of the card that the text names, or empty.
+	Link string
+	// Icon is an icon in the text, for example the tide icon of {tide}.
+	// The run then has no text.
+	Icon Icon
 }
 
-// triggerRe finds a trigger list at the start of a line or a sentence:
-// "Play:", "Fight/Reap:", "Play/After Fight/After Reap:", "Before Fight:".
+// triggerRe finds a trigger list at the start of a line, a sentence, or a
+// quote: "Play:", "Fight/Reap:", "Play/After Fight/After Reap:", "Before
+// Fight:". A trigger in quotes is bold too: the card prints it bold, and it
+// is the trigger of the card that gains it.
 var triggerRe = regexp.MustCompile(
-	`(?:^|[.!”"]\s+)((?:(?:After |Before )?(?:Play|Fight|Reap|Action|Omni|Destroyed|Leaves Play|Scrap)/?)+:)`,
+	`(?:^|[.!”"]\s+|[“"])((?:(?:After |Before )?(?:Play|Fight|Reap|Action|Omni|Destroyed|Leaves Play|Scrap)/?)+:)`,
 )
 
 // TextParts splits a line of card text into runs, with the trigger lists
@@ -179,4 +188,113 @@ func TextParts(line string) []TextPart {
 	}
 
 	return out
+}
+
+// LinkParts splits the plain runs of parts at the names of the mentioned
+// cards. Each name becomes a run with the card's ID as its link. A longer
+// name wins over a shorter name that it contains. The card's own name is
+// not a link.
+func LinkParts(parts []TextPart, mentions []card.Mention, self string) []TextPart {
+	ms := slices.Clone(mentions)
+	ms = slices.DeleteFunc(ms, func(m card.Mention) bool { return m.ID == self || m.Title == "" })
+	slices.SortFunc(ms, func(a, b card.Mention) int { return len(b.Title) - len(a.Title) })
+
+	if len(ms) == 0 {
+		return parts
+	}
+
+	var out []TextPart
+
+	for _, p := range parts {
+		if p.Bold || p.Link != "" {
+			out = append(out, p)
+
+			continue
+		}
+
+		out = append(out, splitMentions(p.Text, ms)...)
+	}
+
+	return out
+}
+
+// splitMentions splits text at the first, longest mention, then splits the
+// rest the same way.
+func splitMentions(text string, ms []card.Mention) []TextPart {
+	if text == "" {
+		return nil
+	}
+
+	best, at := -1, len(text)
+
+	for i, m := range ms {
+		if j := strings.Index(text, m.Title); j >= 0 && j < at {
+			best, at = i, j
+		}
+	}
+
+	if best < 0 {
+		return []TextPart{{Text: text}}
+	}
+
+	m := ms[best]
+
+	var out []TextPart
+	if at > 0 {
+		out = append(out, TextPart{Text: text[:at]})
+	}
+
+	out = append(out, TextPart{Text: m.Title, Link: m.ID})
+
+	return append(out, splitMentions(text[at+len(m.Title):], ms)...)
+}
+
+// textIcons are the icon tokens in the card text of the dataset.
+var textIcons = map[string]Icon{
+	"{tide}": {URL: iconBase + "stat/tide.svg", Mask: true, Label: "Tide"},
+}
+
+// IconParts splits the plain runs of parts at the icon tokens of the card
+// text: "{tide}" becomes a run with the tide icon.
+func IconParts(parts []TextPart) []TextPart {
+	var out []TextPart
+
+	for _, p := range parts {
+		if p.Bold || p.Link != "" || !strings.Contains(p.Text, "{") {
+			out = append(out, p)
+
+			continue
+		}
+
+		out = append(out, splitIcons(p.Text)...)
+	}
+
+	return out
+}
+
+func splitIcons(text string) []TextPart {
+	best, at := "", len(text)
+
+	for tok := range textIcons {
+		if j := strings.Index(text, tok); j >= 0 && j < at {
+			best, at = tok, j
+		}
+	}
+
+	if best == "" {
+		if text == "" {
+			return nil
+		}
+
+		return []TextPart{{Text: text}}
+	}
+
+	var out []TextPart
+	if at > 0 {
+		out = append(out, TextPart{Text: text[:at]})
+	}
+
+	out = append(out, TextPart{Icon: textIcons[best]})
+
+	return append(out, splitIcons(text[at+len(best):])...)
 }
