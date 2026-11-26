@@ -25,6 +25,7 @@ is a fan project and is not affiliated with Ghost Galaxy.
 | `GET /syntax`     | The query syntax                                              |
 | `GET /api/cards`  | The results as JSON, with absolute image URLs                 |
 | `GET /static/*`   | The embedded CSS, JS, fonts, and images                       |
+| `GET /icons/*`    | The published icons, served from this origin for CSS masks    |
 | `GET /health`     | The dataset version and card count, as JSON                   |
 
 Run it locally with `go run ./cmd/search` and open <http://localhost:8080>.

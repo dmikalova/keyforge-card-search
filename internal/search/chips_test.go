@@ -75,3 +75,12 @@ func TestAbilityFieldAndFacets(t *testing.T) {
 		t.Errorf("keyword term %q", k.Term)
 	}
 }
+
+func TestAbilityOrder(t *testing.T) {
+	got := []string{"reap", "action", "fight", "play", "omni"}
+	slices.SortFunc(got, abilityOrder)
+
+	if want := []string{"play", "fight", "reap", "action", "omni"}; !slices.Equal(got, want) {
+		t.Errorf("ability order = %v, want %v", got, want)
+	}
+}

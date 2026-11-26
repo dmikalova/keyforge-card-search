@@ -27,7 +27,7 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 - [x] Read the keyforge-data dataset from the public bucket at run time, and
   reload it when it changes.
 - [x] Comma lists, card-level terms, match tiers, and the Fuzzy box.
-- [ ] Replace the anomaly mark placeholder (⚡) with the anomaly rarity icon.
+- [x] Replace the anomaly mark placeholder (⚡) with the anomaly rarity icon.
 - [x] Page layout with the keyforge.cards purple and orange theme.
 - [x] The query box. Show parse errors at the token.
 - [ ] Autocomplete after `field:` and for field names.
@@ -37,7 +37,8 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 - [x] The facet values toggle their terms, with spread bars for each facet.
 - [x] Keyword, ability (`ab:`), and trait facets.
 - [x] The card view shows every field of the card and each printing.
-- [ ] House icons and set icons in the facets.
+- [x] House, type, rarity, and set icons in the facets, the chips, and the
+  card view. The site serves the icons at /icons/ from the public bucket.
 - [ ] Minimum and maximum for power, armor, and aember. Sort and order controls.
 - [x] The grid with batches, the sentinel, and lazy images (ADR 0002).
 - [x] The card size slider.

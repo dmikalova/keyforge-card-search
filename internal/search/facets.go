@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dmikalova/keyforge-data/card"
+	"github.com/dmikalova/keyforge-data/derive"
 	"github.com/dmikalova/keyforge-data/sets"
 )
 
@@ -20,6 +21,9 @@ type Count struct {
 	N     int
 	// Term is the query term that selects the value, for example "h:brobnar".
 	Term string
+	// Key names the icon of the value: the house, type, or set slug, or the
+	// rarity. It is empty for a value without an icon.
+	Key string
 }
 
 // Facets count the results by field.
@@ -73,7 +77,7 @@ func (e *Engine) count(items []Item) Facets {
 		}
 	}
 
-	return Facets{
+	f := Facets{
 		Houses: counts(houses, "h", HouseLabel, func(a, b string) int {
 			return cmp.Or(cmp.Compare(bucketRank(a), bucketRank(b)), cmp.Compare(a, b))
 		}),
@@ -87,9 +91,23 @@ func (e *Engine) count(items []Item) Facets {
 		Power:     counts(power, "p", func(s string) string { return s }, compareNumbers),
 		Armor:     counts(armor, "ar", func(s string) string { return s }, compareNumbers),
 		Keywords:  counts(keywords, "k", keywordLabel, byCount(keywords)),
-		Abilities: counts(abilities, "ab", AbilityLabel, byCount(abilities)),
+		Abilities: counts(abilities, "ab", AbilityLabel, abilityOrder),
 		Traits:    counts(traits, "tr", traitLabel, byCount(traits)),
 	}
+
+	for _, cs := range [][]Count{f.Houses, f.Types, f.Rarities} {
+		for i := range cs {
+			cs[i].Key = cs[i].Value
+		}
+	}
+
+	for i := range f.Sets {
+		if j := e.codeIndex(f.Sets[i].Value); j < len(e.sets) {
+			f.Sets[i].Key = e.sets[j].Slug
+		}
+	}
+
+	return f
 }
 
 func counts(
@@ -292,4 +310,18 @@ func capitalize(s string) string {
 	}
 
 	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// abilityOrder orders the abilities as people read them: Play, Fight, Reap,
+// and then the other triggers (derive.Abilities).
+func abilityOrder(a, b string) int {
+	rank := func(s string) int {
+		if i := slices.Index(derive.Abilities, s); i >= 0 {
+			return i
+		}
+
+		return len(derive.Abilities)
+	}
+
+	return cmp.Or(cmp.Compare(rank(a), rank(b)), cmp.Compare(a, b))
 }

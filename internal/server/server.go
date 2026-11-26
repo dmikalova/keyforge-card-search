@@ -54,6 +54,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.HandleFunc("GET /api/cards", s.export)
 	mux.Handle("GET /static/", web.StaticHandler())
+	mux.Handle("GET /icons/{path...}", newIconProxy(IconOrigin))
 	mux.HandleFunc("GET /health", s.health)
 
 	return securityHeaders(mux)

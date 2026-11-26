@@ -96,9 +96,15 @@ code {
   text-decoration: none;
 }
 
-.brand img {
-  height: 32px;
-  width: auto;
+.brand .wordmark {
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.brand .sub {
+  font-size: 1rem;
+  color: var(--muted);
 }
 
 .query {
@@ -290,6 +296,9 @@ main {
 
 .facet .label {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .bars .bar {
@@ -421,6 +430,10 @@ main {
   right: 0;
   width: 2rem;
   height: 2rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 0;
   border-radius: 50%;
   border: 1px solid var(--muted);
   background: var(--card);
@@ -634,4 +647,32 @@ main {
   .query button.primary {
     display: none;
   }
+}
+
+/* Icons. An SVG icon is a mask in the text color, so it follows the theme.
+   A webp icon (houses, aember) has its own colors. */
+.ico {
+  display: inline-block;
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.18em;
+  object-fit: contain;
+}
+
+.ico.mask {
+  background-color: currentColor;
+  -webkit-mask: var(--ico) center / contain no-repeat;
+  mask: var(--ico) center / contain no-repeat;
+}
+
+.zoom dd .ico,
+.printing .ico,
+.chip-text .ico {
+  margin-right: 0.3em;
+}
+
+.rarity-mark .ico {
+  width: 1em;
+  height: 1em;
 }

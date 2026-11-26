@@ -67,6 +67,8 @@ type FacetLink struct {
 	Active bool
 	// Percent is the bar width: the count as a part of the largest count.
 	Percent int
+	// Icon is the icon of the value, or the zero Icon.
+	Icon Icon
 }
 
 // Chip is one top-level term of the query in the search bar.
@@ -75,6 +77,8 @@ type Chip struct {
 	Index int
 	// Negated is true for a term with a minus sign.
 	Negated bool
+	// Icon is the icon of a one-value house, type, or rarity chip.
+	Icon Icon
 }
 
 // Results is the part of the search page that a new query replaces: the
@@ -130,7 +134,7 @@ func chipTexts(chips []Chip) []string {
 func NewChips(terms []string) []Chip {
 	out := make([]Chip, len(terms))
 	for i, t := range terms {
-		out[i] = Chip{Text: t, Index: i, Negated: strings.HasPrefix(t, "-")}
+		out[i] = Chip{Text: t, Index: i, Negated: strings.HasPrefix(t, "-"), Icon: chipIcon(t)}
 	}
 
 	return out
@@ -214,6 +218,7 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 				Active:  e.HasChip(chips, c.Term),
 				URL:     SearchURL(e.Toggle(q, c.Term)),
 				Percent: c.N * 100 / max(top, 1),
+				Icon:    facetIcon(name, c.Key, c.Label),
 			}
 			if long && i >= facetTop && !l.Active {
 				g.More = append(g.More, l)
@@ -221,6 +226,9 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 				g.Counts = append(g.Counts, l)
 			}
 		}
+
+		blankIcons(g.Counts)
+		blankIcons(g.More)
 
 		return g
 	}
@@ -248,18 +256,22 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 
 // CardView is the zoomed card: the image and every field of the card.
 type CardView struct {
-	ID     string
-	Title  string
-	House  string
-	Type   string
-	Traits string
+	ID        string
+	Title     string
+	House     string
+	HouseIcon Icon
+	Type      string
+	TypeIcon  Icon
+	Traits    string
 	// Stats are the power, armor, and aember lines that the card has.
 	Stats     []Field
 	Keywords  string
 	Abilities string
 	Enhance   string
 	Flags     string
-	Text      []string
+	// Text is the card text, one line in each element, with the trigger
+	// lists bold.
+	Text      [][]TextPart
 	Printings []PrintView
 	// Print is the index of the shown printing.
 	Print int
@@ -268,12 +280,15 @@ type CardView struct {
 // Field is one labeled value.
 type Field struct {
 	Label, Value string
+	Icon         Icon
 }
 
 // PrintView is one printing in the card view.
 type PrintView struct {
 	Index   int
 	Label   string
+	SetIcon Icon
+	RarIcon Icon
 	Rarity  string
 	Anomaly bool
 	Image   string
@@ -296,7 +311,9 @@ func NewCardView(c *card.Card, shown int, setName func(string) string) CardView 
 		ID:        c.ID,
 		Title:     c.Title,
 		House:     search.HouseLabel(search.HouseOf(c)),
+		HouseIcon: HouseIcon(c.House, search.HouseLabel(c.House)),
 		Type:      capitalize(c.Type),
+		TypeIcon:  TypeIcon(cardTypeKey(c), capitalize(c.Type)),
 		Traits:    strings.Join(mapStrings(c.Traits, capitalize), " • "),
 		Keywords:  keywordList(c.Keywords),
 		Abilities: strings.Join(mapStrings(c.Abilities, search.AbilityLabel), ", "),
@@ -308,18 +325,18 @@ func NewCardView(c *card.Card, shown int, setName func(string) string) CardView 
 	if c.Power != nil {
 		v.Stats = append(
 			v.Stats,
-			Field{"Power", c.Power.String()},
-			Field{"Armor", strconv.Itoa(c.Armor)},
+			Field{"Power", c.Power.String(), StatIcon("Power")},
+			Field{"Armor", strconv.Itoa(c.Armor), StatIcon("Armor")},
 		)
 	}
 
 	if c.Aember > 0 {
-		v.Stats = append(v.Stats, Field{"Æmber", strconv.Itoa(c.Aember)})
+		v.Stats = append(v.Stats, Field{"Æmber", strconv.Itoa(c.Aember), StatIcon("Æmber")})
 	}
 
 	for line := range strings.SplitSeq(c.Text, "\n") {
 		if line = strings.TrimSpace(line); line != "" {
-			v.Text = append(v.Text, line)
+			v.Text = append(v.Text, TextParts(line))
 		}
 	}
 
@@ -327,6 +344,8 @@ func NewCardView(c *card.Card, shown int, setName func(string) string) CardView 
 		v.Printings = append(v.Printings, PrintView{
 			Index:   i,
 			Label:   setName(p.Set) + " " + p.Number,
+			SetIcon: SetIcon(p.Set, setName(p.Set)),
+			RarIcon: RarityIcon(printRarity(p)),
 			Rarity:  p.Rarity,
 			Anomaly: p.Anomaly,
 			Image:   catalog.ImageURL(p.Image),
@@ -491,4 +510,38 @@ func toggleTitle(c FacetLink) string {
 
 func itoa(n int) string {
 	return strconv.Itoa(n)
+}
+
+// cardTypeKey returns the type icon name of a card: a token creature has
+// its own icon.
+func cardTypeKey(c *card.Card) string {
+	if c.HasFlag(search.FlagTokenCreature) {
+		return "tokencreature"
+	}
+
+	return c.Type
+}
+
+// printRarity returns the rarity icon name of a printing. An anomaly has the
+// anomaly icon.
+func printRarity(p card.Printing) string {
+	if p.Anomaly {
+		return "anomaly"
+	}
+
+	return p.Rarity
+}
+
+// blankIcons gives a blank icon to each value without an icon, if some
+// values have one, so the labels line up.
+func blankIcons(links []FacetLink) {
+	if !slices.ContainsFunc(links, func(l FacetLink) bool { return l.Icon.URL != "" }) {
+		return
+	}
+
+	for i := range links {
+		if links[i].Icon.URL == "" {
+			links[i].Icon.Blank = true
+		}
+	}
 }

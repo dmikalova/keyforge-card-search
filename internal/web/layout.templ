@@ -24,8 +24,8 @@ templ page(title, description string, v PageView, live bool) {
 		<body data-signals={ v.Signals() }>
 			<header class="top">
 				<a class="brand" href="/">
-					<img src={ Asset("img/kf-logo-flat.webp") } alt="KeyForge" width="120" height="40"/>
-					<span>card search</span>
+					<span class="wordmark">KeyForge</span>
+					<span class="sub">card search</span>
 				</a>
 				@SearchBar(v, live)
 				<nav class="actions">
@@ -98,7 +98,10 @@ templ Chips(chips []Chip, live bool) {
 		for _, c := range chips {
 			<span class={ "chip", templ.KV("neg", c.Negated) }>
 				if live {
-					<button type="button" class="chip-text" title="Edit" data-on:click={ action("edit", "i", itoa(c.Index)) }>{ c.Text }</button>
+					<button type="button" class="chip-text" title="Edit" data-on:click={ action("edit", "i", itoa(c.Index)) }>
+						@icon(c.Icon)
+						{ c.Text }
+					</button>
 					<button type="button" class="chip-x" aria-label={ "Remove " + c.Text } data-on:click={ action("remove", "i", itoa(c.Index)) }>×</button>
 				} else {
 					<span class="chip-text">{ c.Text }</span>

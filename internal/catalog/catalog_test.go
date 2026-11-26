@@ -18,6 +18,12 @@ func TestImageURL(t *testing.T) {
 		t.Errorf("ImageURL = %q", got)
 	}
 
+	if got := ImageURL(
+		"grimreminders/239.webp?v=17",
+	); got != card.ImageBase+"grimreminders/239.webp?v=17" {
+		t.Errorf("ImageURL drops the version: %q", got)
+	}
+
 	if got := ImageURL(""); got != "" {
 		t.Errorf("ImageURL(\"\") = %q, want empty", got)
 	}

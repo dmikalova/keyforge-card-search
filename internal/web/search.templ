@@ -82,7 +82,10 @@ templ facetLink(c FacetLink) {
 			data-on:click__prevent={ action("toggle", "term", c.Term) }
 		>
 			<span class="bar" style={ barStyle(c.Percent) }></span>
-			<span class="label">{ c.Label }</span>
+			<span class="label">
+				@icon(c.Icon)
+				{ c.Label }
+			</span>
 			<span class="n">{ strconv.Itoa(c.N) }</span>
 		</a>
 	</li>
@@ -104,7 +107,9 @@ templ Tiles(tiles []Tile) {
 				<span class="noimage">{ t.Title }</span>
 			}
 			if t.Anomaly {
-				<span class="rarity-mark anomaly" title="Anomaly" aria-label="Anomaly">⚡</span>
+				<span class="rarity-mark anomaly" title="Anomaly">
+					@icon(RarityIcon("anomaly"))
+				</span>
 			}
 		</button>
 	}
@@ -133,14 +138,18 @@ templ Zoom(v CardView) {
 				}
 			</figure>
 			<div class="zoom-info">
-				<button type="button" class="zoom-close" aria-label="Close">×</button>
+				<button type="button" class="zoom-close" aria-label="Close">
+					<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+						<path d="M6 6l12 12M18 6L6 18"></path>
+					</svg>
+				</button>
 				<h2>{ v.Title }</h2>
 				<dl>
-					@dlRow("House", v.House)
-					@dlRow("Type", v.Type)
+					@iconRow("House", v.House, v.HouseIcon)
+					@iconRow("Type", v.Type, v.TypeIcon)
 					@dlRow("Traits", v.Traits)
 					for _, f := range v.Stats {
-						@dlRow(f.Label, f.Value)
+						@iconRow(f.Label, f.Value, f.Icon)
 					}
 					@dlRow("Keywords", v.Keywords)
 					@dlRow("Abilities", v.Abilities)
@@ -150,7 +159,15 @@ templ Zoom(v CardView) {
 				if len(v.Text) > 0 {
 					<div class="zoom-text">
 						for _, line := range v.Text {
-							<p>{ line }</p>
+							<p>
+								for _, part := range line {
+									if part.Bold {
+										<strong>{ part.Text }</strong>
+									} else {
+										{ part.Text }
+									}
+								}
+							</p>
 						}
 					</div>
 				}
@@ -159,11 +176,10 @@ templ Zoom(v CardView) {
 					for _, p := range v.Printings {
 						<li>
 							<button type="button" class={ "printing", templ.KV("active", p.Index == v.Print) } data-img={ p.Image } data-flavor={ p.Flavor }>
+								@icon(p.SetIcon)
 								<span>{ p.Label }</span>
+								@icon(p.RarIcon)
 								<span class="muted">{ p.Rarity }</span>
-								if p.Anomaly {
-									<span class="rarity-mark anomaly" title="Anomaly">⚡</span>
-								}
 							</button>
 						</li>
 					}
@@ -190,4 +206,29 @@ templ dlRow(label, value string) {
 // QueryError is the short error line under the search bar.
 templ QueryError(msg string) {
 	<p id="qerror" class="qerror" role="status">{ msg }</p>
+}
+
+// iconRow is a card view row with an icon before the value.
+templ iconRow(label, value string, i Icon) {
+	if value != "" {
+		<dt>{ label }</dt>
+		<dd>
+			@icon(i)
+			{ value }
+		</dd>
+	}
+}
+
+// icon shows an icon. An SVG icon is a mask in the text color. The icon is
+// decoration: the text next to it names the value.
+templ icon(i Icon) {
+	if i.URL != "" {
+		if i.Mask {
+			<span class="ico mask" style={ i.MaskStyle() } aria-hidden="true"></span>
+		} else {
+			<img class="ico" src={ i.URL } alt="" aria-hidden="true" width="18" height="18"/>
+		}
+	} else if i.Blank {
+		<span class="ico" aria-hidden="true"></span>
+	}
 }
