@@ -399,7 +399,15 @@ main {
   justify-content: center;
   padding: 16px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   z-index: 10;
+}
+
+/* An open card view or syntax page holds the page still: a drag on the
+   backdrop does not scroll the cards under it. */
+html:has(.zoom:not([hidden])),
+html:has(.syntax-modal:not([hidden])) {
+  overflow: hidden;
 }
 
 .zoom[hidden] {

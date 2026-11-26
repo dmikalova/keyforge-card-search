@@ -235,6 +235,8 @@ type exportCard struct {
 	Keywords  map[string]int   `json:"keywords,omitempty"`
 	Enhance   map[string]int   `json:"enhance,omitempty"`
 	Flags     []string         `json:"flags,omitempty"`
+	Mentions  []card.Mention   `json:"mentions,omitempty"`
+	Related   []exportRelated  `json:"related,omitempty"`
 	Printing  exportPrinting   `json:"printing"`
 	Printings []exportPrinting `json:"printings"`
 }
@@ -246,6 +248,7 @@ type exportPrinting struct {
 	Anomaly bool   `json:"anomaly,omitempty"`
 	Image   string `json:"image,omitempty"`
 	Flavor  string `json:"flavor,omitempty"`
+	Artist  string `json:"artist,omitempty"`
 }
 
 type exportResult struct {
@@ -262,6 +265,7 @@ func toExport(p *card.Printing) exportPrinting {
 		Anomaly: p.Anomaly,
 		Image:   catalog.ImageURL(p.Image),
 		Flavor:  p.Flavor,
+		Artist:  p.Artist,
 	}
 }
 
@@ -290,6 +294,7 @@ func (s *Server) export(w http.ResponseWriter, r *http.Request) {
 			ID: c.ID, Title: c.Title, House: c.House, Type: c.Type, Traits: c.Traits,
 			Text: c.Text, Power: c.Power, Armor: c.Armor, Aember: c.Aember,
 			Keywords: c.Keywords, Enhance: c.Enhance, Flags: c.Flags,
+			Mentions: c.Mentions, Related: s.related(c),
 			Printing: toExport(it.Printing),
 		}
 
@@ -355,4 +360,37 @@ func defaultPrint(c *card.Card) int {
 	}
 
 	return max(len(c.Printings)-1, 0)
+}
+
+// exportRelated is one thread of related cards, with the title of each card.
+type exportRelated struct {
+	Label string      `json:"label"`
+	Cards []exportRef `json:"cards"`
+}
+
+// exportRef is a card that a thread names.
+type exportRef struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+// related returns the card's threads of related cards. A card ID that the
+// dataset does not have keeps an empty title.
+func (s *Server) related(c *card.Card) []exportRelated {
+	out := make([]exportRelated, 0, len(c.Related))
+
+	for _, r := range c.Related {
+		t := exportRelated{Label: r.Label, Cards: make([]exportRef, len(r.Cards))}
+
+		for i, id := range r.Cards {
+			t.Cards[i].ID = id
+			if rc := s.src.Engine().Card(id); rc != nil {
+				t.Cards[i].Title = rc.Title
+			}
+		}
+
+		out = append(out, t)
+	}
+
+	return out
 }
