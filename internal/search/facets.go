@@ -171,7 +171,7 @@ func compareNumbers(a, b string) int {
 }
 
 // houseBucket returns the house facet bucket of a card: its house, or
-// HouseNone for every card without a house (anomalies, multi-house cards,
+// HouseNone for every card without a house (anomalies,
 // houseless kinds, and reference cards). The facet shows that bucket as
 // "Other", and `house:none` selects the same cards. The group field and
 // is:houseless or is:reference select one part of it.
@@ -223,7 +223,7 @@ var houseLabels = map[string]string{
 
 // groupLabels are the names of the groups of the cards without a house.
 var groupLabels = map[string]string{
-	"anomaly": "Anomaly", "multihouse": "Multi-house", "skybeast": "Skybeast",
+	"anomaly": "Anomaly", "skybeast": "Skybeast",
 	"revenant": "Revenant", "mercenary": "Mercenary", "houseless": "Houseless",
 	"archonpower": "Archon power", "prophecy": "Prophecy", "thetide": "The Tide",
 	"reference": "Reference",

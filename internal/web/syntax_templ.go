@@ -235,7 +235,7 @@ func SyntaxContent() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><code>sort:set,-power,name</code></a>. <code>sort:random</code> shuffles the results, alone. <code>seed:</code> fixes the random order. <code>order:desc</code> reverses the whole order. <code>unique:prints</code> shows each printing. Without a <code>sort:</code>, a query with a name or a bare word sorts by the best name match: the whole name, then the start of the name, then the start of a word, then the rest. The sort by house puts the cards without a house last, in groups: anomalies, multi-house cards, the houseless kinds, then the reference cards. <code>group:anomaly</code> selects one group.</p><h2>Keys</h2><table><tbody>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><code>sort:set,-power,name</code></a>. <code>sort:random</code> shuffles the results, alone. <code>seed:</code> fixes the random order. <code>order:desc</code> reverses the whole order. <code>unique:prints</code> shows each printing. Without a <code>sort:</code>, a query with a name or a bare word sorts by the best name match: the whole name, then the start of the name, then the start of a word, then the rest. The sort by house puts the cards without a house last, in groups: anomalies, the houseless kinds, then the reference cards. <code>group:anomaly</code> selects one group.</p><h2>Keys</h2><table><tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

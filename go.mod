@@ -6,7 +6,7 @@ toolchain go1.27.4
 
 require (
 	github.com/a-h/templ v0.3.1118
-	github.com/dmikalova/keyforge-data v1.9.1-0.20261126214817-7cb6f2328f88
+	github.com/dmikalova/keyforge-data v1.9.2-0.20261126220300-cbf366cf5694
 	github.com/dmikalova/project-standards v1.37.0
 	github.com/magefile/mage v1.17.2
 	github.com/starfederation/datastar-go v1.2.2
