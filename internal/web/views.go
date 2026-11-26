@@ -263,6 +263,9 @@ type CardView struct {
 	Abilities []Field
 	Enhance   []Field
 	Flags     []Field
+	// Notes are short facts about how the card appears in decks (card.Note),
+	// for example "Always 3+ copies".
+	Notes []string
 	// Rarities are the distinct rarities of the printings, oldest first.
 	Rarities []Field
 	// Text is the card text, one line in each element, with the trigger
@@ -368,6 +371,10 @@ func NewCardView(
 
 	for _, f := range c.Flags {
 		v.Flags = append(v.Flags, Field{Value: f, Term: "is:" + f})
+	}
+
+	for _, n := range c.Notes {
+		v.Notes = append(v.Notes, n.Text)
 	}
 
 	if c.Power != nil {
@@ -766,6 +773,10 @@ func CardMeta(v CardView, c *card.Card) PageMeta {
 		}
 	}
 
+	if notes := strings.Join(v.Notes, " · "); notes != "" && len(notes) <= maxMetaNotes {
+		lines = append(lines, notes)
+	}
+
 	if v.Print >= 0 && v.Print < len(c.Printings) {
 		if f := strings.TrimSpace(c.Printings[v.Print].Flavor); f != "" {
 			lines = append(lines, f)
@@ -779,6 +790,10 @@ func CardMeta(v CardView, c *card.Card) PageMeta {
 		Path:        CardPageURL(c.ID),
 	}
 }
+
+// maxMetaNotes is the longest notes line that a link preview shows. Longer
+// notes stay in the card view.
+const maxMetaNotes = 120
 
 // CardPageURL returns the path of a card's own page, the link to share: a
 // link preview shows the card.

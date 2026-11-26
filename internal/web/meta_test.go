@@ -43,3 +43,26 @@ func TestCardMeta(t *testing.T) {
 		t.Errorf("path = %q", m.Path)
 	}
 }
+
+// TestCardNotes checks that the card view and the link preview show the
+// notes of a card.
+func TestCardNotes(t *testing.T) {
+	c := &card.Card{
+		ID: "plaguerat-dis", Title: "Plague Rat", House: "dis", Type: "creature",
+		Power: &card.Power{N: 1},
+		Notes: []card.Note{{Kind: "copies", Text: "Always 3+ copies"}},
+		Printings: []card.Printing{
+			{Set: "callofthearchons", Number: "089", Image: "callofthearchons/089.webp"},
+		},
+	}
+	v := NewCardView(c, 0, nil, func(s string) string { return s },
+		func(string) *card.Card { return nil })
+
+	if len(v.Notes) != 1 || v.Notes[0] != "Always 3+ copies" {
+		t.Errorf("notes = %v", v.Notes)
+	}
+
+	if m := CardMeta(v, c); !strings.HasSuffix(m.Description, "\nAlways 3+ copies") {
+		t.Errorf("description = %q", m.Description)
+	}
+}

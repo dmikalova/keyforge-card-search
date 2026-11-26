@@ -259,6 +259,7 @@ type exportCard struct {
 	Enhance   map[string]int   `json:"enhance,omitempty"`
 	Flags     []string         `json:"flags,omitempty"`
 	Mentions  []card.Mention   `json:"mentions,omitempty"`
+	Notes     []card.Note      `json:"notes,omitempty"`
 	Related   []exportRelated  `json:"related,omitempty"`
 	Printing  exportPrinting   `json:"printing"`
 	Printings []exportPrinting `json:"printings"`
@@ -318,6 +319,7 @@ func (s *Server) export(w http.ResponseWriter, r *http.Request) {
 			Text: c.Text, Power: c.Power, Armor: c.Armor, Aember: c.Aember,
 			Keywords: c.Keywords, Enhance: c.Enhance, Flags: c.Flags,
 			Mentions: c.Mentions, Related: s.related(c),
+			Notes:    c.Notes,
 			Printing: toExport(it.Printing),
 		}
 

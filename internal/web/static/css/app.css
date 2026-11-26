@@ -909,3 +909,10 @@ html:has(.syntax-modal:not([hidden])) {
     white-space: normal;
   }
 }
+
+/* The notes of a card (card.Note) are plain text, one on each line. */
+.zoom dd.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
