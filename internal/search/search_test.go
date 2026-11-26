@@ -340,7 +340,8 @@ func TestHouseFacetBuckets(t *testing.T) {
 		got = append(got, c.Label+"="+c.Term)
 	}
 
-	want := []string{"Houseless=group:houseless", "Reference=group:reference"}
+	// Every card without a house is in one bucket, Other.
+	want := []string{"Other=h:none"}
 	if !slices.Equal(got, want) {
 		t.Errorf("house facet = %v, want %v", got, want)
 	}

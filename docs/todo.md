@@ -43,7 +43,8 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
   card (`card=ID`), so a reload and the back button work.
 - [x] The header stays on the screen, and the card view opens below it.
 - [x] `sort:` takes a comma list of keys, with `-` for a descending key.
-- [x] The house facet groups the cards without a house (`group:`).
+- [x] The house facet puts every card without a house in one bucket, Other
+  (`h:none`). `group:` and `is:houseless` select one part of it.
 - [x] House, type, rarity, and set icons in the facets and the card view. The site serves the icons at /icons/ from the public bucket.
 - [ ] Minimum and maximum for power, armor, and aember. Sort and order
   controls in the page.
@@ -56,7 +57,7 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 - [x] JSON export of the results, with absolute image URLs.
 - [x] Keyboard shortcuts: `/`, `Esc`, the arrow keys and `hjkl`, `Enter`, `r`, `?`,
   `+`, `-`. (`b` opened the builder, which is gone.)
-- [x] The `/syntax` page, linked from a `?` bubble.
+- [x] The `/syntax` page, linked from a `?` bubble that opens it as a modal.
 - [ ] A smoke e2e test with go-rod: load `/`, run a query, and count the tiles.
 
 ## Launch

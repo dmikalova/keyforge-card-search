@@ -29,7 +29,13 @@
     const size = Math.min(maxSize, Math.max(minSize, n));
     document.documentElement.style.setProperty("--tile", `${size}px`);
     const input = document.getElementById("size");
-    if (input) input.value = String(size);
+    if (input) {
+      input.value = String(size);
+      // The filled part of the track, for the browsers without a progress
+      // pseudo-element.
+      const pct = ((size - minSize) / (maxSize - minSize)) * 100;
+      input.style.setProperty("--fill", `${pct}%`);
+    }
     save(size);
   };
 
@@ -67,8 +73,11 @@
   const closeZoom = () => {
     const z = zoom();
     if (!z || z.hidden) return false;
+    // Each card viewed from the card view is a history entry, so back and
+    // forward step between the cards. Closing goes back past all of them in
+    // one step, to the results.
     if (history.state && history.state.kfcard) {
-      history.back();
+      history.go(-(history.state.depth || 1));
     } else {
       history.replaceState(history.state, "", withCard(""));
       hideZoom();
@@ -116,9 +125,18 @@
     opened(id) {
       const z = zoom();
       if (!z) return;
+      // One modal at a time: the card view replaces the syntax modal.
+      const sm = document.getElementById("syntax-modal");
+      if (sm) sm.hidden = true;
+      const wasOpen = !z.hidden;
       z.hidden = false;
       if (id && cardParam() !== id && !fromHistory) {
-        history.pushState({ kfcard: true }, "", withCard(id));
+        // depth counts the card entries since the results, so closing can go
+        // back to the results in one step.
+        const depth = wasOpen && history.state && history.state.kfcard
+          ? (history.state.depth || 1) + 1
+          : 1;
+        history.pushState({ kfcard: true, depth }, "", withCard(id));
       }
       fromHistory = false;
       z.querySelector(".zoom-close")?.focus({ preventScroll: true });
@@ -195,6 +213,26 @@
       { text: "(", insert: "(", note: "Start a group" },
     ].filter((o) => !p || o.text.startsWith(p));
 
+  // numItems are the comparisons that can follow a field or a key that
+  // takes a number. base is the text before the operator ("power",
+  // "keyword:assault"), and rangeBase is the text before a range.
+  const numItems = (base, rangeBase) =>
+    [
+      ["=", "Equal to"],
+      ["!=", "Not equal to"],
+      ["<", "Less than"],
+      ["<=", "Less than or equal to"],
+      [">", "More than"],
+      [">=", "More than or equal to"],
+    ]
+      .map(([o, note]) => ({ text: o, insert: base + o, note, num: true }))
+      .concat([
+        { text: ":2..4", insert: rangeBase, note: "A range: type the low and the high number", num: true },
+      ]);
+
+  // norm is a value without case and punctuation, as the query compares it.
+  const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
   // wordAt returns the word around the caret: its start and end, and the
   // part before the caret. A word ends at a space or a parenthesis.
   const wordAt = (q) => {
@@ -219,6 +257,18 @@
     if (op) {
       const name = w.slice(0, op.index).toLowerCase();
       const f = acFields().find((x) => x.name === name || x.alias === name);
+      const rest = w.slice(op.index + op[0].length);
+      // After "power:" or "keyword:assault", where a number goes, suggest
+      // the comparisons.
+      if (f && op[0] === ":" && rest === "" && f.num) {
+        const base = w.slice(0, op.index);
+        ac = { items: numItems(base, base + ":"), at: -1, start: start + neg, end };
+        return render();
+      }
+      if (f && op[0] === ":" && rest && (f.numkeys || []).includes(norm(rest))) {
+        ac = { items: numItems(w, w + ":"), at: -1, start: start + neg, end };
+        return render();
+      }
       if (!f || !f.values) return closeAC();
       let vs = op.index + op[0].length;
       if (f.list) {
@@ -292,9 +342,10 @@
     q.setSelectionRange(caret, caret);
     closeAC();
     q.dispatchEvent(new Event("input", { bubbles: true }));
-    // A field or an operator needs more text after it, so the list stays
-    // open with the next suggestions.
-    if (it.field || it.insert.endsWith(" ") || it.insert === "(") suggest();
+    // The list stays open with the next suggestions: after a field, an
+    // operator, or a value such as keyword:assault that takes a number. After
+    // a comparison the user types the number, so the list stays closed.
+    if (!it.num) suggest();
   };
 
   // ---- Keys and clicks -------------------------------------------------
@@ -334,9 +385,7 @@
       opener = null;
       $("random")?.click();
     },
-    "?": () => {
-      location.href = "/syntax";
-    },
+    "?": () => openSyntax(),
     "+": () => setSize(current() + step),
     "=": () => setSize(current() + step),
     "-": () => setSize(current() - step),
@@ -384,11 +433,16 @@
   document.addEventListener("keydown", (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "Escape") {
+      if (closeSyntax()) return;
       if (closeZoom()) return;
       if (typing(e.target)) e.target.blur();
       return;
     }
     if (typing(e.target)) return;
+    // With the syntax modal open, the arrow keys scroll it, and the other
+    // shortcuts wait.
+    const sm = syntaxModal();
+    if (sm && !sm.hidden) return;
     if (e.key === "/") {
       e.preventDefault();
       const q = input();
@@ -407,7 +461,56 @@
     }
   });
 
+  // The query syntax modal. It loads the text of /syntax/content one time,
+  // so the modal and the /syntax page have one source.
+  const syntaxModal = () => $("syntax-modal");
+  let syntaxLoaded = false;
+  let syntaxOpener = null;
+  const openSyntax = async () => {
+    const m = syntaxModal();
+    if (!m) {
+      location.href = "/syntax";
+      return;
+    }
+    if (!syntaxLoaded) {
+      try {
+        const r = await fetch("/syntax/content");
+        if (!r.ok) throw new Error(r.statusText);
+        $("syntax-body").innerHTML = await r.text();
+        syntaxLoaded = true;
+      } catch {
+        location.href = "/syntax";
+        return;
+      }
+    }
+    closeZoom();
+    syntaxOpener = document.activeElement;
+    m.hidden = false;
+    m.querySelector(".zoom-close")?.focus({ preventScroll: true });
+  };
+  const closeSyntax = () => {
+    const m = syntaxModal();
+    if (!m || m.hidden) return false;
+    m.hidden = true;
+    syntaxOpener?.focus?.({ preventScroll: true });
+    syntaxOpener = null;
+    return true;
+  };
+
   document.addEventListener("click", (e) => {
+    const sm = syntaxModal();
+    if (sm && !sm.hidden && sm.contains(e.target)) {
+      // The backdrop or the close button closes the modal. A click in the
+      // text does not, so the user can select text.
+      if (e.target === sm || e.target.closest(".zoom-close")) closeSyntax();
+      return;
+    }
+    const help = e.target.closest("a.help");
+    if (help && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
+      e.preventDefault();
+      openSyntax();
+      return;
+    }
     const li = e.target.closest("#ac li");
     if (li) {
       e.preventDefault();
@@ -544,8 +647,24 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     setTop();
-    const n = load();
-    if (n) setSize(n);
+    // A page that opens with a card (?card=ID) gets a results entry under
+    // the card entry, so that closing the card view goes to the results.
+    const z0 = zoom();
+    const id0 = cardParam();
+    if (id0 && z0 && !z0.hidden && !(history.state && history.state.kfcard)) {
+      history.replaceState(null, "", withCard(""));
+      history.pushState({ kfcard: true, depth: 1 }, "", withCard(id0));
+    }
+    setSize(current());
+    // A new query replaces the results and the slider in them. Set the new
+    // slider to the current size.
+    const main = document.querySelector("main");
+    if (main && "MutationObserver" in window) {
+      new MutationObserver(() => {
+        const s = document.getElementById("size");
+        if (s && !s.style.getPropertyValue("--fill")) setSize(current());
+      }).observe(main, { childList: true, subtree: true });
+    }
     restorePlace();
     document.fonts?.ready.then(restorePlace);
   });

@@ -599,3 +599,15 @@ func flavorLines(flavor string, c *card.Card) [][]TextPart {
 
 	return out
 }
+
+// commas writes a count with thousands separators: 1670 becomes "1,670".
+func commas(n int) string {
+	s := strconv.Itoa(n)
+	if n < 0 {
+		return "-" + commas(-n)
+	}
+	for i := len(s) - 3; i > 0; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	return s
+}

@@ -42,3 +42,11 @@ func TestIconPartsShowTheTide(t *testing.T) {
 		t.Errorf("parts = %+v", parts)
 	}
 }
+
+func TestCommas(t *testing.T) {
+	for n, want := range map[int]string{0: "0", 33: "33", 999: "999", 1670: "1,670", 1234567: "1,234,567"} {
+		if got := commas(n); got != want {
+			t.Errorf("commas(%d) = %q, want %q", n, got, want)
+		}
+	}
+}

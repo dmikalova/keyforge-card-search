@@ -149,6 +149,31 @@ func TestSyntaxAndHealth(t *testing.T) {
 		t.Errorf("syntax: %d", w.Code)
 	}
 
+	// The modal loads only the text, without the page around it.
+	frag := get(t, h, "/syntax/content")
+	if frag.Code != http.StatusOK ||
+		!bytes.Contains(frag.Body.Bytes(), []byte(`id="syntax-title"`)) ||
+		bytes.Contains(frag.Body.Bytes(), []byte("<html")) {
+		t.Errorf("syntax content: %d %.80q", frag.Code, frag.Body.String())
+	}
+
+	page := get(t, h, "/").Body.String()
+	// The card count and the size slider are at the top of the side panel.
+	if f, s := strings.Index(
+		page,
+		`class="facets"`,
+	), strings.Index(
+		page,
+		`class="summary"`,
+	); f < 0 ||
+		s < f {
+		t.Error("the summary is not in the side panel")
+	}
+
+	if !strings.Contains(page, `id="syntax-modal"`) || !strings.Contains(page, `href="/syntax"`) {
+		t.Error("the page has no syntax modal or no /syntax link")
+	}
+
 	var health struct {
 		Status  string `json:"status"`
 		Version string `json:"version"`

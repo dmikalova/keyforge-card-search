@@ -53,6 +53,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /syntax", func(w http.ResponseWriter, r *http.Request) {
 		s.render(w, r, web.SyntaxPage())
 	})
+	// The syntax modal loads the same text from here.
+	mux.HandleFunc("GET /syntax/content", func(w http.ResponseWriter, r *http.Request) {
+		s.render(w, r, web.SyntaxContent())
+	})
 	mux.HandleFunc("GET /api/cards", s.export)
 	mux.Handle("GET /static/", web.StaticHandler())
 	mux.Handle("GET /icons/{path...}", newIconProxy(IconOrigin))

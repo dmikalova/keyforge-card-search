@@ -139,9 +139,6 @@ func counts(
 
 	for i, k := range keys {
 		term := field + ":" + quote(k)
-		if g, ok := strings.CutPrefix(k, groupBucket); ok && field == "h" {
-			term = FieldGroup + ":" + g
-		}
 
 		out[i] = Count{Value: k, Label: label(k), N: m[k], Term: term}
 	}
@@ -157,35 +154,26 @@ func compareNumbers(a, b string) int {
 	return cmp.Or(compareBool(ea != nil, eb != nil), cmp.Compare(na, nb), cmp.Compare(a, b))
 }
 
-// groupBucket is the prefix of the house facet bucket of a card without a
-// house: "~anomaly" for the group anomaly. The bucket selects its cards
-// with a group term, not with a house term.
-const groupBucket = "~"
-
-// houseBucket returns the house facet bucket of a card: its house, or the
-// bucket of its group (see GroupOf).
+// houseBucket returns the house facet bucket of a card: its house, or
+// HouseNone for every card without a house (anomalies, multi-house cards,
+// houseless kinds, and reference cards). The facet shows that bucket as
+// "Other", and `house:none` selects the same cards. The group field and
+// is:houseless or is:reference select one part of it.
 func houseBucket(c *card.Card) string {
 	if c.House != "" {
 		return c.House
 	}
 
-	return groupBucket + GroupOf(c)
+	return HouseNone
 }
 
-// bucketRank puts the houses first, then the groups of the cards without a
-// house in the order of card.HouselessGroups.
+// bucketRank puts the houses first and the bucket Other last.
 func bucketRank(b string) int {
-	g, ok := strings.CutPrefix(b, groupBucket)
-	if !ok {
-		return 0
+	if b == HouseNone {
+		return 1
 	}
 
-	i := slices.Index(card.HouselessGroups, g)
-	if i < 0 {
-		return len(card.HouselessGroups) + 1
-	}
-
-	return 1 + i
+	return 0
 }
 
 // codeIndex returns the position of the set with the code, or the end.
@@ -214,7 +202,7 @@ var houseLabels = map[string]string{
 	"logos": "Logos", "mars": "Mars", "ouboros": "Ouboros", "redemption": "Redemption",
 	"sanctum": "Sanctum", "saurian": "Saurian", "shadows": "Shadows", "skyborn": "Skyborn",
 	"staralliance": "Star Alliance", "unfathomable": "Unfathomable", "untamed": "Untamed",
-	HouseNone: "No house",
+	HouseNone: "Other",
 }
 
 // groupLabels are the names of the groups of the cards without a house.
@@ -234,12 +222,9 @@ func GroupLabel(g string) string {
 	return g
 }
 
-// HouseLabel returns the printed name of a house slug, or the name of a
-// group bucket of the house facet.
+// HouseLabel returns the printed name of a house slug. HouseNone is
+// "Other".
 func HouseLabel(slug string) string {
-	if g, ok := strings.CutPrefix(slug, groupBucket); ok {
-		return GroupLabel(g)
-	}
 
 	if l, ok := houseLabels[slug]; ok {
 		return l

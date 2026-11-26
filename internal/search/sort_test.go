@@ -3,6 +3,7 @@ package search
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/dmikalova/keyforge-data/query"
@@ -99,20 +100,43 @@ func TestSortListOrders(t *testing.T) {
 	}
 }
 
-func TestGroupBuckets(t *testing.T) {
-	if got := HouseLabel(groupBucket + "archonpower"); got != "Archon power" {
-		t.Errorf("label = %q", got)
+func TestHouseFacetOther(t *testing.T) {
+	e := engine(t)
+
+	res, err := e.Search("")
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	order := []string{
-		"dis",
-		groupBucket + "anomaly",
-		groupBucket + "skybeast",
-		groupBucket + "thetide",
+	houses := res.Facets.Houses
+	if len(houses) == 0 {
+		t.Fatal("no house facet")
 	}
-	for i := 1; i < len(order); i++ {
-		if bucketRank(order[i-1]) >= bucketRank(order[i]) {
-			t.Errorf("%s ranks after %s", order[i-1], order[i])
+
+	// One bucket for every card without a house, named Other, last.
+	other := houses[len(houses)-1]
+	if other.Value != HouseNone || other.Label != "Other" || other.Term != "h:none" {
+		t.Fatalf("last house bucket = %+v", other)
+	}
+
+	for _, h := range houses[:len(houses)-1] {
+		if h.Value == HouseNone || strings.HasPrefix(h.Value, "~") {
+			t.Errorf("house bucket %+v is not a house", h)
+		}
+	}
+
+	none, err := e.Search(other.Term)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(none.Items) != other.N {
+		t.Errorf("Other counts %d, h:none returns %d", other.N, len(none.Items))
+	}
+
+	for _, it := range none.Items {
+		if it.Card.House != "" {
+			t.Errorf("%s has the house %s", it.Card.ID, it.Card.House)
 		}
 	}
 }
@@ -134,6 +158,22 @@ func TestCompletions(t *testing.T) {
 
 	if h := find("house"); h.Alias != "h" || !slices.Contains(h.Values, "dis") {
 		t.Errorf("house = %+v", h)
+	}
+
+	// The bar suggests the comparison operators only where a number goes.
+	if k := find(
+		"keyword",
+	); !slices.Contains(k.NumKeys, "assault") || slices.Contains(k.NumKeys, "elusive") ||
+		k.Num {
+		t.Errorf("keyword = %+v", k)
+	}
+
+	if p := find("power"); !p.Num || len(p.NumKeys) > 0 {
+		t.Errorf("power = %+v", p)
+	}
+
+	if h := find("house"); h.Num {
+		t.Error("house takes no number")
 	}
 
 	if s := find("sort"); !slices.Contains(s.Values, "power") || !s.List {

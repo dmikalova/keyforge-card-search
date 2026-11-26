@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/dmikalova/keyforge-data/derive"
 	"github.com/dmikalova/keyforge-data/query"
 )
 
@@ -19,6 +20,12 @@ type CompleteField struct {
 	// List is true when the value is a comma list, so the bar completes
 	// the part after the last comma.
 	List bool `json:"list,omitempty"`
+	// Num is true for a field that takes a number after it: power>=3,
+	// power:2..4. The bar then suggests the comparison operators.
+	Num bool `json:"num,omitempty"`
+	// NumKeys are the keys of a keyed field that take a number:
+	// keyword:assault>=2. The bar suggests the operators after them.
+	NumKeys []string `json:"numkeys,omitempty"`
 }
 
 // Completions are the field names and the values that the search bar
@@ -44,6 +51,8 @@ func (e *Engine) Completions() Completions {
 
 	for _, f := range e.reg.Fields() {
 		cf := CompleteField{Name: f.Name, Alias: f.Alias, Desc: fieldDocs[f.Name]}
+		cf.Num = f.Kind == query.KindNumber || f.Name == "enhance"
+		cf.NumKeys = numericKeys(f)
 
 		switch {
 		case f.Name == "trait":
@@ -97,4 +106,30 @@ var fieldDocs = map[string]string{
 	DirOrder:          "Order: asc or desc",
 	DirUnique:         "unique:prints shows each printing",
 	DirSeed:           "Seed of sort:random",
+}
+
+// numericKeys returns the keys of a keyed field that take a number: the
+// keywords with a value (assault, hazardous, splash-attack), and every
+// enhance icon, because enhance counts icons.
+func numericKeys(f query.FieldInfo) []string {
+	switch f.Name {
+	case "keyword":
+		var out []string
+		for _, k := range derive.Keywords {
+			if k.Valued {
+				out = append(out, query.Normalize(k.Name))
+			}
+		}
+
+		return out
+	case "enhance":
+		out := make([]string, len(f.Values))
+		for i, v := range f.Values {
+			out[i] = query.Normalize(v)
+		}
+
+		return out
+	}
+
+	return nil
 }
