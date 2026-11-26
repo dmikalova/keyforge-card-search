@@ -45,7 +45,7 @@ func TestFacetsMarkFilters(t *testing.T) {
 	// The excluded house has no results, so it has a row with a count of
 	// 0, and the row removes the exclusion.
 	dis, ok := find(gs, "House", "Dis")
-	if !ok || !dis.Excluded || dis.N != 0 || dis.URL != SearchURL("set:WC") {
+	if !ok || !dis.Excluded || dis.N != 0 || dis.URL != SearchURL("set:wc") {
 		t.Errorf("Dis row = %+v (found %t)", dis, ok)
 	}
 

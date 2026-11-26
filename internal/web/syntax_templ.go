@@ -143,7 +143,7 @@ func SyntaxContent() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = row("h:ek r:r t:act", "The start of a value is enough when one value starts with it: house:ekwidon rarity:Rare type:action. A whole value wins over a longer one. If more values start with it, the error lists them.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = row("h:ek r:r t:act", "The start of a value is enough when one value starts with it: house:ekwidon rarity:rare type:action. A whole value wins over a longer one. If more values start with it, the error lists them.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

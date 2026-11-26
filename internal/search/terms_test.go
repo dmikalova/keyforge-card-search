@@ -12,13 +12,13 @@ func TestTerms(t *testing.T) {
 		want []string
 	}{
 		{"", nil},
-		{"h:dis  -s:wc troll", []string{"house:dis", "-set:WC", "troll"}},
+		{"h:dis  -s:wc troll", []string{"house:dis", "-set:wc", "troll"}},
 		{
 			"(h:dis or h:logos) p>=3 sort:power",
 			[]string{"(house:dis or house:logos)", "power>=3", "sort:power"},
 		},
 		{"h:dis or h:logos", []string{"house:dis or house:logos"}},
-		{"s:aoa,wc", []string{"set:AoA,WC"}},
+		{"s:aoa,wc", []string{"set:aoa,wc"}},
 	}
 	for _, c := range cases {
 		got, err := e.Terms(c.q)
