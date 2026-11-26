@@ -147,13 +147,15 @@
     b.click();
   };
 
-  // showPrinting shows the image, the flavor text, and the artist of one
-  // printing.
+  // showPrinting shows the image, the card text, the flavor text, and the
+  // artist of one printing.
   const showPrinting = (btn) => {
     const z = zoom();
     const img = $("zoom-img");
     if (img && btn.dataset.img) img.src = btn.dataset.img;
-    for (const f of z.querySelectorAll(".flavor[data-print], .artist[data-print]")) {
+    for (const f of z.querySelectorAll(
+      ".flavor[data-print], .artist[data-print], .zoom-text[data-print]",
+    )) {
       f.hidden = f.dataset.print !== btn.dataset.print;
     }
     for (const b of z.querySelectorAll(".printing")) {
@@ -613,6 +615,14 @@
       const btn = e.target.closest(".printing");
       if (btn) {
         showPrinting(btn);
+        return;
+      }
+      // "All sets" opens and closes the side-by-side view of the printings.
+      const all = e.target.closest(".all-sets-toggle");
+      if (all) {
+        const s = $("all-sets");
+        if (s) s.hidden = !s.hidden;
+        all.setAttribute("aria-expanded", String(!s?.hidden));
         return;
       }
       // A click on the backdrop or the close button closes the view. A

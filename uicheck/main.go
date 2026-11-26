@@ -100,6 +100,7 @@ func run(base, out string, w width) bool {
 	c.marks()
 	c.slider()
 	c.cardFilters()
+	c.textChanges()
 	c.cardPage()
 
 	if w.mobile {
@@ -416,4 +417,38 @@ func (c *checker) jsClick(sel string) {
 	}
 
 	c.wait(900 * time.Millisecond)
+}
+
+// textChanges checks the text of each printing: is:changed opens on a
+// printing with the change icon, a set chip switches the card text, and
+// "All sets" shows every printing with the changed words marked.
+func (c *checker) textChanges() {
+	c.search("is:changed")
+	c.click(".grid .tile")
+	c.expect("is:changed opens a card", c.zoomOpen(), "")
+
+	icon := c.eval(`String(!!document.querySelector('#zoom .printing.active .text-changed'))`)
+	c.expect("the shown printing has the change icon", icon == "true", icon)
+
+	shown := `[...document.querySelectorAll('#zoom .zoom-text')].filter(e => !e.hidden)`
+	n := c.eval(`String(` + shown + `.length)`)
+	c.expect("one card text shows", n == "1", n)
+
+	before := c.eval(shown + `[0]?.dataset.print || ''`)
+	c.jsClick(`#zoom .printing:not(.active)`)
+	after := c.eval(shown + `[0]?.dataset.print || ''`)
+	c.expect("a set chip switches the card text", after != "" && after != before, before+" "+after)
+
+	c.jsClick(`#zoom .all-sets-toggle`)
+	open := c.eval(`String(!document.getElementById('all-sets')?.hidden)`)
+	c.expect("All sets opens", open == "true", open)
+
+	figs := c.eval(`String(document.querySelectorAll('#all-sets figure').length)`)
+	c.expect("All sets shows every printing", atoi(figs) >= 2, figs)
+
+	marks := c.eval(`String(document.querySelectorAll('#all-sets mark.diff').length)`)
+	c.expect("All sets marks the changed words", atoi(marks) >= 1, marks)
+	c.shot("all-sets")
+
+	c.jsClick(`#zoom .zoom-close`)
 }

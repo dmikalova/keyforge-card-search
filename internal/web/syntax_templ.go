@@ -222,14 +222,14 @@ func SyntaxContent() templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</tbody></table><h2>Flags</h2><p><code>is:anomaly</code> (a card with an anomaly printing), <code>is:reprint</code> (a card in more than one set), <code>is:houseless</code>, <code>is:reference</code>, <code>is:tokencreature</code>, <code>is:gigantic</code>, <code>is:eviltwin</code>, and the houseless kinds such as <code>is:skybeast</code>. <code>first:gr</code> gives the cards that are new in Grim Reminders.</p><h2>Directives</h2><p><code>sort:</code> takes a list of keys: name, set, house, type, rarity, power, armor, aember, enhance, artist (printings without an artist last). Each key sorts the ties of the keys before it. A minus sign makes one key descending: <a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</tbody></table><h2>Flags</h2><p><code>is:anomaly</code> (a card with an anomaly printing), <code>is:reprint</code> (a card in more than one set), <code>is:changed</code> (a printing with other card text than the newest printing), <code>is:houseless</code>, <code>is:reference</code>, <code>is:tokencreature</code>, <code>is:gigantic</code>, <code>is:eviltwin</code>, and the houseless kinds such as <code>is:skybeast</code>. <code>first:gr</code> gives the cards that are new in Grim Reminders.</p><h2>Directives</h2><p><code>sort:</code> takes a list of keys: name, set, house, type, rarity, power, armor, aember, enhance, artist (printings without an artist last). Each key sorts the ties of the keys before it. A minus sign makes one key descending: <a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(SearchURL("sort:set,-power,name"))).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 66, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 67, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
@@ -307,7 +307,7 @@ func row(query, meaning string) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 92, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 93, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -320,7 +320,7 @@ func row(query, meaning string) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(meaning)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 92, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 93, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {

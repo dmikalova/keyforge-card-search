@@ -916,3 +916,70 @@ html:has(.syntax-modal:not([hidden])) {
   flex-direction: column;
   gap: 0.15rem;
 }
+
+/* A set chip whose printing has its own card text. */
+.text-changed {
+  display: inline-flex;
+  color: var(--primary);
+}
+
+/* The side-by-side view of every printing. */
+.all-sets-toggle {
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--muted);
+  background: transparent;
+  color: var(--on-surface);
+  cursor: pointer;
+}
+
+.all-sets-toggle[aria-expanded="true"] {
+  border-color: var(--primary);
+}
+
+.all-sets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.all-sets[hidden] {
+  display: none;
+}
+
+.all-sets-print {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.all-sets-print img {
+  width: 100%;
+  height: auto;
+  border-radius: 4.5% / 3.2%;
+}
+
+.all-sets-print figcaption {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.all-sets-text {
+  font-size: 0.85rem;
+}
+
+.all-sets-text p + p {
+  margin-top: 0.3rem;
+}
+
+mark.diff {
+  background: rgb(245 166 35 / 30%);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 0.1rem;
+}

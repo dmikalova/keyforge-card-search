@@ -183,14 +183,16 @@ templ Zoom(v CardView) {
 						</dd>
 					}
 				</dl>
-				if len(v.Text) > 0 {
-					<div class="zoom-text">
-						for _, line := range v.Text {
-							<p>
-								@textParts(line)
-							</p>
-						}
-					</div>
+				for _, p := range v.Sets {
+					if len(p.Text) > 0 {
+						<div class="zoom-text" data-print={ itoa(p.Index) } hidden?={ p.Index != v.Print }>
+							for _, line := range p.Text {
+								<p>
+									@textParts(line)
+								</p>
+							}
+						</div>
+					}
 				}
 				<h3>{ plural(len(v.Sets), "Set", "Sets") }</h3>
 				<ul class="printings">
@@ -199,6 +201,9 @@ templ Zoom(v CardView) {
 							<button type="button" class={ "printing", templ.KV("active", p.Index == v.Print) } data-img={ p.Image } data-print={ itoa(p.Index) }>
 								@icon(p.SetIcon)
 								<span>{ p.Label }</span>
+								if p.Changed {
+									@textChangedIcon()
+								}
 							</button>
 							<button
 								type="button"
@@ -216,6 +221,9 @@ templ Zoom(v CardView) {
 						</li>
 					}
 				</ul>
+				if len(v.Sets) > 1 {
+					@allSets(v)
+				}
 				for _, p := range v.Sets {
 					if p.Artist.Term != "" {
 						<p class="artist" data-print={ itoa(p.Index) } hidden?={ p.Index != v.Print }>
@@ -262,6 +270,8 @@ templ textParts(parts []TextPart) {
 	for _, part := range parts {
 		if part.Icon.URL != "" {
 			<span class="ico mask text-icon" style={ part.Icon.MaskStyle() } role="img" aria-label={ part.Icon.Label } title={ part.Icon.Label }></span>
+		} else if part.Changed {
+			<mark class="diff">{ part.Text }</mark>
 		} else if part.Bold {
 			<strong>{ part.Text }</strong>
 		} else if part.Link != "" {
@@ -318,4 +328,42 @@ templ icon(i Icon) {
 	} else if i.Blank {
 		<span class="ico" aria-hidden="true"></span>
 	}
+}
+
+// textChangedIcon marks a set chip whose printing has its own card text.
+templ textChangedIcon() {
+	<span class="text-changed" title="Text changed in this printing" aria-label="Text changed in this printing">
+		<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M4 20h4L19 9l-4-4L4 16z"></path>
+			<path d="M13 7l4 4"></path>
+		</svg>
+	</span>
+}
+
+// allSets is the button and the view of every printing side by side: the
+// image and the text, with the words that differ from the card text
+// marked. The script opens and closes it; it needs no server request.
+templ allSets(v CardView) {
+	<button type="button" class="all-sets-toggle" aria-expanded="false" aria-controls="all-sets">All sets</button>
+	<section id="all-sets" class="all-sets" hidden>
+		for _, p := range v.Sets {
+			<figure class="all-sets-print">
+				<img src={ p.Image } alt={ p.Label } loading="lazy" width="150" height="210"/>
+				<figcaption>
+					@icon(p.SetIcon)
+					<span>{ p.Label }</span>
+					if p.Changed {
+						@textChangedIcon()
+					}
+				</figcaption>
+				<div class="all-sets-text">
+					for _, line := range p.Diff {
+						<p>
+							@textParts(line)
+						</p>
+					}
+				</div>
+			</figure>
+		}
+	</section>
 }

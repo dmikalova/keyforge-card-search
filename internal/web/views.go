@@ -308,6 +308,14 @@ type PrintView struct {
 	// Set is the printing's set as a filter. The set chip switches the
 	// shown printing, and a funnel button next to it adds the term.
 	Set Field
+	// Text is the card text of the printing, one line in each element.
+	Text [][]TextPart
+	// Changed reports whether the printing has its own text: Master Vault
+	// changed the text of another printing (card.Printing.Text).
+	Changed bool
+	// Diff is the plain text of the printing with the words that differ
+	// from the card text marked, for the side-by-side view of all sets.
+	Diff [][]TextPart
 }
 
 // RelatedView is one thread of related cards in the card view.
@@ -400,11 +408,7 @@ func NewCardView(
 		})
 	}
 
-	for line := range strings.SplitSeq(c.Text, "\n") {
-		if line = strings.TrimSpace(line); line != "" {
-			v.Text = append(v.Text, IconParts(LinkParts(TextParts(line), c.Mentions, c.ID)))
-		}
-	}
+	v.Text = textLines(c.Text, c)
 
 	for i, p := range c.Printings {
 		v.Sets = append(v.Sets, PrintView{
@@ -413,11 +417,19 @@ func NewCardView(
 			SetIcon: SetIcon(p.Set, setName(p.Set)),
 			Image:   catalog.ImageURL(p.Image),
 			Flavor:  flavorLines(p.Flavor, c),
+			Text:    v.Text,
+			Changed: p.Text != "",
+			Diff:    DiffParts(search.PlainText(c.Text), search.PlainText(c.Text)),
 			Set: Field{
 				Value: setName(p.Set), Icon: SetIcon(p.Set, setName(p.Set)),
 				Term: search.FieldTerm("set", p.Set),
 			},
 		})
+
+		if p.Text != "" {
+			v.Sets[i].Text = textLines(p.Text, c)
+			v.Sets[i].Diff = DiffParts(search.PlainText(p.Text), search.PlainText(c.Text))
+		}
 
 		if p.Artist != "" {
 			v.Sets[i].Artist = Field{Value: p.Artist, Term: ArtistTerm(p.Artist)}
@@ -799,4 +811,18 @@ const maxMetaNotes = 120
 // link preview shows the card.
 func CardPageURL(id string) string {
 	return "/card/" + url.PathEscape(id)
+}
+
+// textLines returns card text as lines of text parts: the triggers bold,
+// the names of other cards as links, and the icon tokens as icons.
+func textLines(text string, c *card.Card) [][]TextPart {
+	var out [][]TextPart
+
+	for line := range strings.SplitSeq(text, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			out = append(out, IconParts(LinkParts(TextParts(line), c.Mentions, c.ID)))
+		}
+	}
+
+	return out
 }

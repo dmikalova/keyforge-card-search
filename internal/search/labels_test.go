@@ -23,3 +23,17 @@ func TestLabels(t *testing.T) {
 		t.Errorf("label without data = %q", got)
 	}
 }
+
+// TestChangedFlag checks that is:changed finds the card with a printing of
+// other text, and shows that printing.
+func TestChangedFlag(t *testing.T) {
+	r, err := engine(t).Search("is:changed")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(r.Items) != 1 || r.Items[0].Card.ID != "troll-brobnar" ||
+		r.Items[0].Printing.Text == "" {
+		t.Errorf("is:changed = %d items", len(r.Items))
+	}
+}

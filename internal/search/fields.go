@@ -27,13 +27,16 @@ type Entry struct {
 var printingFields = []string{"set", "rarity", query.NumberField, "flavor", FieldArtist}
 
 // printingFlags are the flags that test a printing, not the card.
-var printingFlags = []string{FlagAnomaly, FlagReprint}
+var printingFlags = []string{FlagAnomaly, FlagReprint, FlagChanged}
 
 // The flags that every dataset has. The houseless kind labels come from the
 // card data.
 const (
-	FlagAnomaly       = "anomaly"
-	FlagReprint       = "reprint"
+	FlagAnomaly = "anomaly"
+	FlagReprint = "reprint"
+	// FlagChanged marks a printing whose card text differs from the card
+	// text (card.Printing.Text): Master Vault changed the text of a reprint.
+	FlagChanged       = "changed"
 	FlagHouseless     = "houseless"
 	FlagReference     = "reference"
 	FlagTokenCreature = "tokencreature"
@@ -234,8 +237,14 @@ func (e *Engine) flags(cards []card.Card) []query.Flag[*Entry] {
 				return p.Set != en.FirstSet
 			})
 		}},
+		{Name: FlagChanged, Test: func(en *Entry) bool {
+			return slices.ContainsFunc(
+				en.Printings,
+				func(p *card.Printing) bool { return p.Text != "" },
+			)
+		}},
 	}
-	known := []string{FlagAnomaly, FlagReprint}
+	known := []string{FlagAnomaly, FlagReprint, FlagChanged}
 
 	for _, name := range []string{
 		FlagHouseless, FlagReference, FlagTokenCreature, FlagGigantic, FlagEvilTwin,

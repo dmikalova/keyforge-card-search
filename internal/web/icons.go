@@ -141,6 +141,9 @@ type TextPart struct {
 	// Icon is an icon in the text, for example the tide icon of {tide}.
 	// The run then has no text.
 	Icon Icon
+	// Changed marks words that differ from the card text, in the side-by-side
+	// view of all sets.
+	Changed bool
 }
 
 // triggerRe finds a trigger list at the start of a line, a sentence, or a
