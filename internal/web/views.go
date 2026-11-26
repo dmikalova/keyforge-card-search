@@ -20,6 +20,9 @@ type Tile struct {
 	Image string
 	// Caption is the set code and the number, for example "GR 239".
 	Caption string
+	// Anomaly is true for an anomaly printing. The tile shows the anomaly
+	// rarity mark.
+	Anomaly bool
 }
 
 // ErrorView is a query parse error.
@@ -58,6 +61,10 @@ type PageView struct {
 	Next    string
 	JSONURL string
 	Houses  []FacetLink
+	// Missing is true when the card dataset is not published yet.
+	Missing bool
+	// Fuzzy is true when fuzzy name matching is on.
+	Fuzzy bool
 }
 
 // NewTiles makes the tiles of the items.
@@ -65,15 +72,11 @@ func NewTiles(items []search.Item) []Tile {
 	out := make([]Tile, len(items))
 
 	for i, it := range items {
-		caption := it.Printing.Number
-		if s, ok := search.SetOf(it.Printing.Set); ok {
-			caption = s.Code + " " + caption
-		}
-
 		out[i] = Tile{
 			Title:   it.Card.Title,
 			Image:   catalog.ImageURL(it.Printing.Image),
-			Caption: caption,
+			Caption: it.Set.Code + " " + it.Printing.Number,
+			Anomaly: it.Printing.Anomaly,
 		}
 	}
 
@@ -166,6 +169,7 @@ var syntaxFields = []syntaxField{
 	{"flavor", "fl", "fl:smash", "The flavor text."},
 	{"house", "h", "h:staralliance", "h:none gives the cards without a house."},
 	{"set", "s", "s:gr", "The set code, slug, or name."},
+	{"first", "", "first:gr", "The set of the card's first printing."},
 	{"type", "t", "t:artifact", ""},
 	{"rarity", "r", "r:rare", ""},
 	{"keyword", "k", "k:assault>=2", "A keyword, with an optional number."},
@@ -195,6 +199,11 @@ func plural(n int, one, many string) string {
 
 func barStyle(percent int) templ.SafeCSS {
 	return templ.SafeCSS("width:" + strconv.Itoa(percent) + "%")
+}
+
+// FuzzyOff reports whether the query turns fuzzy name matching off.
+func FuzzyOff(q string) bool {
+	return search.FuzzyIsOff(q)
 }
 
 // QueryEscape escapes a query for a URL.

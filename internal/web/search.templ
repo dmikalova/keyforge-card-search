@@ -6,6 +6,9 @@ import "strconv"
 templ SearchPage(v PageView) {
 	@page(pageTitle(v.Query), "Search every KeyForge card by house, set, type, keyword, power, and more.", v.Query) {
 		<main class="search">
+			if v.Missing {
+				<p class="banner" role="status">The card dataset is not published yet. Check back soon.</p>
+			}
 			<details id="builder" class="builder">
 				<summary>Builder (b)</summary>
 				<p class="muted">The full builder comes later. Click a house to add it to the query.</p>
@@ -80,6 +83,9 @@ templ Tiles(tiles []Tile) {
 				<img src={ t.Image } alt={ t.Title } loading="lazy" decoding="async" width="300" height="420"/>
 			} else {
 				<span class="noimage">{ t.Title }</span>
+			}
+			if t.Anomaly {
+				<span class="rarity-mark anomaly" title="Anomaly" aria-label="Anomaly">⚡</span>
 			}
 		</button>
 	}

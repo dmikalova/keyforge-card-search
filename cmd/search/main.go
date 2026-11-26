@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/dmikalova/keyforge-card-search/internal/catalog"
-	"github.com/dmikalova/keyforge-card-search/internal/search"
+	"github.com/dmikalova/keyforge-card-search/internal/fixture"
 	"github.com/dmikalova/keyforge-card-search/internal/server"
 )
 
@@ -39,30 +39,24 @@ func run() error {
 		port = defaultPort
 	}
 
-	// The keyforge-data dataset does not exist yet. The fixture stands in.
-	cards, err := catalog.Fixture()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	src, err := source(ctx, log)
 	if err != nil {
 		return err
 	}
 
-	engine, err := search.New(cards.Cards())
-	if err != nil {
-		return fmt.Errorf("make the search engine: %w", err)
-	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           server.New(engine, log).Handler(),
+		Handler:           server.New(src, log).Handler(),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	errs := make(chan error, 1)
 
 	go func() {
-		log.Info("listening", "port", port, "cards", len(cards.Cards()))
+		log.Info("listening", "port", port, "cards", src.Engine().Len())
 
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errs <- err
@@ -84,4 +78,41 @@ func run() error {
 	}
 
 	return nil
+}
+
+// source returns the dataset source. With DATASET_URL, it reads the dataset
+// from the URL and reads it again when it changes. Without it, it uses the
+// embedded fixture, for local work.
+func source(ctx context.Context, log *slog.Logger) (catalog.Source, error) {
+	url := os.Getenv("DATASET_URL")
+	if url == "" {
+		log.Info("DATASET_URL is not set: using the fixture")
+
+		ds, err := fixture.Dataset()
+		if err != nil {
+			return nil, err
+		}
+
+		src, err := catalog.NewStatic(ds)
+		if err != nil {
+			return nil, fmt.Errorf("make the search engine: %w", err)
+		}
+
+		return src, nil
+	}
+
+	l, err := catalog.NewLoader(url, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// A failed first read is not fatal: the site starts empty and the
+	// loader tries again at each interval.
+	if err := l.Refresh(ctx); err != nil {
+		log.Warn("read the dataset", "url", url, "error", err)
+	}
+
+	go l.Run(ctx)
+
+	return l, nil
 }

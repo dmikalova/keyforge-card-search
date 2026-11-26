@@ -82,14 +82,14 @@ func page(title, description, query string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"><meta property=\"og:site_name\" content=\"keyforge.cards\"><meta name=\"theme-color\" content=\"#2b1d33\"><link rel=\"icon\" type=\"image/webp\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"><meta property=\"og:site_name\" content=\"keyforge.cards\"><meta name=\"theme-color\" content=\"#2b1d33\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Asset("img/favicon.webp")).ResolveURL(ctx)
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Asset("img/favicon.svg")).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layout.templ`, Line: 17, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layout.templ`, Line: 17, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 		if templ_7745c5c3_Err != nil {
@@ -160,20 +160,30 @@ func page(title, description, query string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" placeholder=\"Search cards: h:brobnar p>=5 or k:elusive\" autocomplete=\"off\" spellcheck=\"false\" aria-label=\"Query\"> <button type=\"submit\" class=\"primary\">Search</button></form><nav class=\"actions\"><a class=\"button\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" placeholder=\"Search cards: h:brobnar p>=5 or k:elusive\" autocomplete=\"off\" spellcheck=\"false\" aria-label=\"Query\"> <input type=\"hidden\" name=\"fz\" value=\"1\"> <label class=\"fuzzy\" title=\"Fuzzy name matching: the letters in order\"><input id=\"fuzzy\" name=\"fuzzy\" type=\"checkbox\" value=\"on\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if !FuzzyOff(query) {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, " checked")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "> Fuzzy</label> <button type=\"submit\" class=\"primary\">Search</button></form><nav class=\"actions\"><a class=\"button\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL("/random?q=" + QueryEscape(query))).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layout.templ`, Line: 43, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layout.templ`, Line: 48, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" title=\"Random card (r)\">Random</a> <a class=\"button help\" href=\"/syntax\" title=\"Query syntax (?)\" aria-label=\"Query syntax\">?</a></nav></header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" title=\"Random card (r)\">Random</a> <a class=\"button help\" href=\"/syntax\" title=\"Query syntax (?)\" aria-label=\"Query syntax\">?</a></nav></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -181,7 +191,7 @@ func page(title, description, query string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<footer class=\"foot\"><p>Unofficial fan site. KeyForge, its card text, and its card images are the property of Ghost Galaxy.</p></footer></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<footer class=\"foot\"><p>Unofficial fan site. KeyForge, its card text, and its card images are the property of Ghost Galaxy.</p></footer></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

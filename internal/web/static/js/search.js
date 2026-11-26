@@ -143,6 +143,12 @@
     if (e.target.id === "size") setSize(Number(e.target.value));
   });
 
+  // The Fuzzy box sends the query form, so the server puts the box's state
+  // in the query.
+  document.addEventListener("change", (e) => {
+    if (e.target.id === "fuzzy") e.target.form.requestSubmit();
+  });
+
   document.addEventListener("DOMContentLoaded", () => {
     const n = load();
     if (n) setSize(n);

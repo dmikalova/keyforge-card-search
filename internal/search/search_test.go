@@ -7,18 +7,18 @@ import (
 
 	"github.com/dmikalova/keyforge-data/query"
 
-	"github.com/dmikalova/keyforge-card-search/internal/catalog"
+	"github.com/dmikalova/keyforge-card-search/internal/fixture"
 )
 
 func engine(t *testing.T) *Engine {
 	t.Helper()
 
-	c, err := catalog.Fixture()
+	ds, err := fixture.Dataset()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	e, err := New(c.Cards())
+	e, err := New(ds)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,14 +55,27 @@ func TestSearchMatches(t *testing.T) {
 		{"is:tokencreature", []string{"berserker-brobnar"}},
 		{"is:reference", []string{"expect-the-unexpected"}},
 		{"is:skybeast", []string{"cloudrunner"}},
-		{"h:none", []string{"cloudrunner", "expect-the-unexpected"}},
-		{"is:anomaly", []string{"ghostform-saurian"}},
+		{"is:anomaly", []string{"ghostform"}},
+		{"is:houseless", []string{"cloudrunner", "ghostform"}},
+		{"h:none", []string{"cloudrunner", "expect-the-unexpected", "ghostform"}},
+		{"s:cota s:vm23", []string{"troll-brobnar"}},
+		{"s:cota s:mm", []string{"dust-pixie-untamed"}},
+		{"s:cota -s:vm23 n=troll", nil},
+		{"s:cota -s:mm n:pixie", nil},
+		{"s:vm23,mm s:cota", []string{"dust-pixie-untamed", "troll-brobnar"}},
+		{"s:vm23 or s:mm s:cota", []string{"troll-brobnar", "dust-pixie-untamed"}},
+		{"first:cota s:vm23", []string{"troll-brobnar"}},
+		{"first:vm23", nil},
+		{"h:mars,dis t:action,artifact", []string{"gateway-to-dis-dis", "mothergun-mars"}},
+		{"is:eviltwin,gigantic", []string{"krump-brobnar-evil-twin", "ultra-gravitron-logos"}},
+		{"n:mmc fuzzy:off", nil},
+		{"n:mimic fuzzy:off", []string{"mimic-gel-logos"}},
 		{"k:assault>=2", []string{"ancient-bear-untamed"}},
 		{"k:elusive h:mars", []string{"agent-hoo-man-mars"}},
 		{"en:capture>=1", []string{"adaptoid-logos"}},
 		{"en>=3", []string{"adaptoid-logos"}},
 		{"s:vm23", []string{"troll-brobnar"}},
-		{"s:cota is:reprint", nil},
+		{"s:cota is:reprint", []string{"dust-pixie-untamed", "troll-brobnar"}},
 		{"s:vm23 is:reprint", []string{"troll-brobnar"}},
 		{"s:mm -is:reprint t:creature h:untamed", nil},
 		{"fl:smash", []string{"troll-brobnar"}},
@@ -136,11 +149,11 @@ func TestDefaultSortPutsReferenceAndHouselessLast(t *testing.T) {
 		t.Errorf("first = %s, want 1-2-punch-brobnar", first)
 	}
 
-	tail := got[len(got)-2:]
+	tail := got[len(got)-3:]
 	slices.Sort(tail)
 
-	if !slices.Equal(tail, []string{"cloudrunner", "expect-the-unexpected"}) {
-		t.Errorf("last two = %v", tail)
+	if !slices.Equal(tail, []string{"cloudrunner", "expect-the-unexpected", "ghostform"}) {
+		t.Errorf("last three = %v", tail)
 	}
 }
 
@@ -232,5 +245,100 @@ func TestAddTerm(t *testing.T) {
 
 	if got := WithSeed("", 5); got != "seed:5" {
 		t.Errorf("WithSeed = %q", got)
+	}
+}
+
+func TestShownPrintingFollowsThePrintingTerms(t *testing.T) {
+	e := engine(t)
+	cases := []struct{ q, set string }{
+		{"n=troll s:cota s:vm23", "vaultmasters2023"},
+		{"n=troll s:cota", "callofthearchons"},
+		{"n=troll -s:vm23 or n=troll", "vaultmasters2023"},
+		{"n=troll (s:cota or #999)", "callofthearchons"},
+		{"n=troll s:cota,vm23", "vaultmasters2023"},
+		{"n:dust s:cota s:mm r:common", "massmutation"},
+	}
+
+	for _, c := range cases {
+		r, err := e.Search(c.q)
+		if err != nil {
+			t.Errorf("%q: %v", c.q, err)
+
+			continue
+		}
+
+		if len(r.Items) != 1 || r.Items[0].Printing.Set != c.set {
+			t.Errorf("%q shows %+v, want one item in %s", c.q, r.Items, c.set)
+		}
+	}
+
+	r, err := e.Search("n=troll s:cota unique:prints")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(r.Items) != 1 || r.Items[0].Set.Code != "CotA" {
+		t.Errorf("unique:prints with s:cota = %+v, want the CotA printing only", r.Items)
+	}
+}
+
+func TestNameRanksWithOtherTerms(t *testing.T) {
+	r, err := engine(t).Search("n:troll t:creature")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(r.Items) < 2 || r.Items[0].Card.ID != "troll-brobnar" {
+		t.Errorf("n:troll t:creature = %v, want troll-brobnar first of several", ids(r))
+	}
+
+	r, err = engine(t).Search("troll")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(r.Items) == 0 || r.Items[0].Card.ID != "troll-brobnar" {
+		t.Errorf("troll = %v, want troll-brobnar first", ids(r))
+	}
+}
+
+func TestHouseFacetBuckets(t *testing.T) {
+	r, err := engine(t).Search("h:none")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got []string
+	for _, c := range r.Facets.Houses {
+		got = append(got, c.Label+"="+c.Term)
+	}
+
+	want := []string{"Houseless=is:houseless", "Reference=is:reference"}
+	if !slices.Equal(got, want) {
+		t.Errorf("house facet = %v, want %v", got, want)
+	}
+}
+
+func TestFuzzySwitch(t *testing.T) {
+	cases := []struct {
+		q    string
+		on   bool
+		want string
+	}{
+		{"n:troll", false, "n:troll fuzzy:off"},
+		{"n:troll fuzzy:off", true, "n:troll"},
+		{"n:troll FUZZY:OFF", false, "n:troll fuzzy:off"},
+		{"", false, "fuzzy:off"},
+	}
+
+	for _, c := range cases {
+		got := SetFuzzy(c.q, c.on)
+		if got != c.want {
+			t.Errorf("SetFuzzy(%q, %t) = %q, want %q", c.q, c.on, got, c.want)
+		}
+
+		if FuzzyIsOff(got) == c.on {
+			t.Errorf("FuzzyIsOff(%q) = %t", got, !c.on)
+		}
 	}
 }

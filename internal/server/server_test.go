@@ -9,24 +9,26 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dmikalova/keyforge-data/card"
+
 	"github.com/dmikalova/keyforge-card-search/internal/catalog"
-	"github.com/dmikalova/keyforge-card-search/internal/search"
+	"github.com/dmikalova/keyforge-card-search/internal/fixture"
 )
 
 func handler(t *testing.T) http.Handler {
 	t.Helper()
 
-	c, err := catalog.Fixture()
+	ds, err := fixture.Dataset()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	e, err := search.New(c.Cards())
+	src, err := catalog.NewStatic(ds)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s := New(e, nil)
+	s := New(src, nil)
 	s.seed = func() uint64 { return 42 }
 
 	return s.Handler()
@@ -124,7 +126,7 @@ func TestExportHasImageURLs(t *testing.T) {
 		t.Errorf("image = %s, want empty (the fixture has no image for this printing)", img)
 	}
 
-	if img := out.Cards[0].Printings[0].Image; img != catalog.ImageBaseURL+"callofthearchons/048.webp" {
+	if img := out.Cards[0].Printings[0].Image; img != card.ImageBase+"callofthearchons/048.webp" {
 		t.Errorf("first printing image = %s", img)
 	}
 
@@ -144,7 +146,66 @@ func TestSyntaxAndHealth(t *testing.T) {
 		t.Errorf("syntax: %d", w.Code)
 	}
 
-	if w := get(t, h, "/health"); w.Body.String() != "ok" {
+	var health struct {
+		Status  string `json:"status"`
+		Version string `json:"version"`
+		Cards   int    `json:"cards"`
+	}
+
+	w := get(t, h, "/health")
+	if err := json.Unmarshal(w.Body.Bytes(), &health); err != nil || health.Status != "ok" ||
+		health.Version != "fixture" || health.Cards == 0 {
 		t.Errorf("health: %q", w.Body.String())
 	}
 }
+
+func TestFuzzyBoxGoesIntoTheQuery(t *testing.T) {
+	h := handler(t)
+
+	w := get(t, h, "/?q="+url.QueryEscape("n:troll")+"&fz=1")
+	if loc := w.Header().Get("Location"); loc != "/?q="+url.QueryEscape("n:troll fuzzy:off") {
+		t.Errorf("box off: Location = %s", loc)
+	}
+
+	w = get(t, h, "/?q="+url.QueryEscape("n:troll fuzzy:off")+"&fz=1&fuzzy=on")
+	if loc := w.Header().Get("Location"); loc != "/?q="+url.QueryEscape("n:troll") {
+		t.Errorf("box on: Location = %s", loc)
+	}
+
+	body := get(t, h, "/?q="+url.QueryEscape("n:troll fuzzy:off")).Body.String()
+	if strings.Contains(body, `id="fuzzy" name="fuzzy" type="checkbox" value="on" checked`) {
+		t.Error("the box is checked with fuzzy:off")
+	}
+
+	body = get(t, h, "/?q="+url.QueryEscape("n:troll")).Body.String()
+	if !strings.Contains(body, `type="checkbox" value="on" checked`) {
+		t.Error("the box is not checked without fuzzy:off")
+	}
+}
+
+func TestAnomalyTileHasTheMark(t *testing.T) {
+	body := get(t, handler(t), "/?q="+url.QueryEscape("is:anomaly")).Body.String()
+	if !strings.Contains(body, `class="rarity-mark anomaly"`) {
+		t.Error("the anomaly tile has no anomaly mark")
+	}
+}
+
+func TestMissingDatasetShowsABanner(t *testing.T) {
+	src := missingSource{}
+
+	empty, err := catalog.NewStatic(&card.Dataset{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src.Static = empty
+
+	body := get(t, New(src, nil).Handler(), "/").Body.String()
+	if !strings.Contains(body, "not published yet") {
+		t.Error("no banner for a missing dataset")
+	}
+}
+
+type missingSource struct{ *catalog.Static }
+
+func (missingSource) Missing() bool { return true }

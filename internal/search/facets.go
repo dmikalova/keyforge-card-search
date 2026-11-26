@@ -6,6 +6,9 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/dmikalova/keyforge-data/card"
+	"github.com/dmikalova/keyforge-data/sets"
 )
 
 // Count is one value of a facet and the number of results with it.
@@ -30,7 +33,7 @@ type Facets struct {
 	Armor []Count
 }
 
-func count(items []Item) Facets {
+func (e *Engine) count(items []Item) Facets {
 	houses := map[string]int{}
 	types := map[string]int{}
 	rarities := map[string]int{}
@@ -39,10 +42,10 @@ func count(items []Item) Facets {
 	armor := map[string]int{}
 
 	for _, it := range items {
-		houses[HouseOf(it.Card)]++
+		houses[houseBucket(it.Card)]++
 		types[it.Card.Type]++
 		rarities[it.Printing.Rarity]++
-		setCounts[it.Printing.Set]++
+		setCounts[it.Set.Code]++
 
 		if p := it.Card.Power; p != nil {
 			power[p.String()]++
@@ -52,14 +55,14 @@ func count(items []Item) Facets {
 
 	return Facets{
 		Houses: counts(houses, "h", HouseLabel, func(a, b string) int {
-			return cmp.Or(compareBool(a == HouseNone, b == HouseNone), cmp.Compare(a, b))
+			return cmp.Or(cmp.Compare(bucketRank(a), bucketRank(b)), cmp.Compare(a, b))
 		}),
 		Types: counts(types, "t", strings.ToLower, cmp.Compare[string]),
 		Rarities: counts(rarities, "r", func(s string) string { return s }, func(a, b string) int {
 			return cmp.Or(cmp.Compare(rarityRank(a), rarityRank(b)), cmp.Compare(a, b))
 		}),
-		Sets: counts(setCounts, "s", setCode, func(a, b string) int {
-			return cmp.Compare(setIndex(a), setIndex(b))
+		Sets: counts(setCounts, "s", func(s string) string { return s }, func(a, b string) int {
+			return cmp.Or(cmp.Compare(e.codeIndex(a), e.codeIndex(b)), cmp.Compare(a, b))
 		}),
 		Power: counts(power, "p", func(s string) string { return s }, compareNumbers),
 		Armor: counts(armor, "ar", func(s string) string { return s }, compareNumbers),
@@ -76,12 +79,12 @@ func counts(
 	out := make([]Count, len(keys))
 
 	for i, k := range keys {
-		value := k
-		if field == "s" {
-			value = setCode(k)
+		term := field + ":" + quote(k)
+		if f, ok := bucketFlags[k]; ok && field == "h" {
+			term = "is:" + f
 		}
 
-		out[i] = Count{Value: value, Label: label(k), N: m[k], Term: field + ":" + quote(value)}
+		out[i] = Count{Value: k, Label: label(k), N: m[k], Term: term}
 	}
 
 	return out
@@ -95,12 +98,56 @@ func compareNumbers(a, b string) int {
 	return cmp.Or(compareBool(ea != nil, eb != nil), cmp.Compare(na, nb), cmp.Compare(a, b))
 }
 
-func setCode(slug string) string {
-	if s, ok := SetOf(slug); ok {
-		return s.Code
+// The house facet buckets of the cards without a house. A bucket selects its
+// cards with a flag, not with a house term.
+const (
+	bucketHouseless = "houseless"
+	bucketReference = "reference"
+)
+
+var bucketFlags = map[string]string{
+	bucketHouseless: FlagHouseless,
+	bucketReference: FlagReference,
+}
+
+// houseBucket returns the house facet bucket of a card: its house, or the
+// houseless or reference bucket, or HouseNone.
+func houseBucket(c *card.Card) string {
+	switch {
+	case c.House != "":
+		return c.House
+	case c.HasFlag(FlagReference):
+		return bucketReference
+	case c.HasFlag(FlagHouseless):
+		return bucketHouseless
+	default:
+		return HouseNone
+	}
+}
+
+// bucketRank puts the houses first, then the houseless, reference, and
+// no-house buckets.
+func bucketRank(b string) int {
+	switch b {
+	case bucketHouseless:
+		return 1
+	case bucketReference:
+		return 2
+	case HouseNone:
+		return 3
+	default:
+		return 0
+	}
+}
+
+// codeIndex returns the position of the set with the code, or the end.
+func (e *Engine) codeIndex(code string) int {
+	i := slices.IndexFunc(e.sets, func(s sets.Set) bool { return s.Code == code })
+	if i < 0 {
+		return len(e.sets)
 	}
 
-	return slug
+	return i
 }
 
 // quote puts a value in quotes if it has a space or a quote.
@@ -119,7 +166,7 @@ var houseLabels = map[string]string{
 	"logos": "Logos", "mars": "Mars", "ouboros": "Ouboros", "redemption": "Redemption",
 	"sanctum": "Sanctum", "saurian": "Saurian", "shadows": "Shadows", "skyborn": "Skyborn",
 	"staralliance": "Star Alliance", "unfathomable": "Unfathomable", "untamed": "Untamed",
-	HouseNone: "No house",
+	HouseNone: "No house", bucketHouseless: "Houseless", bucketReference: "Reference",
 }
 
 // HouseLabel returns the printed name of a house slug.
@@ -144,4 +191,43 @@ func AddTerm(q, term string) string {
 // WithSeed returns the query with a "seed:" directive added.
 func WithSeed(q string, seed uint64) string {
 	return AddTerm(q, DirSeed+":"+strconv.FormatUint(seed, 10))
+}
+
+// fuzzyOffTerm is the directive term that turns fuzzy name matching off.
+const fuzzyOffTerm = DirFuzzy + ":" + FuzzyOff
+
+// FuzzyIsOff reports whether the query has the term "fuzzy:off" at the top
+// level. It does not parse the query, so it works on a query with an error.
+func FuzzyIsOff(q string) bool {
+	off := false
+
+	for w := range strings.FieldsSeq(q) {
+		switch strings.ToLower(w) {
+		case fuzzyOffTerm:
+			off = true
+		case DirFuzzy + ":on":
+			off = false
+		}
+	}
+
+	return off
+}
+
+// SetFuzzy returns the query with fuzzy name matching on or off: it removes
+// the fuzzy directives and adds "fuzzy:off" for off.
+func SetFuzzy(q string, on bool) string {
+	var keep []string
+
+	for w := range strings.FieldsSeq(q) {
+		if l := strings.ToLower(w); l != fuzzyOffTerm && l != DirFuzzy+":on" {
+			keep = append(keep, w)
+		}
+	}
+
+	out := strings.Join(keep, " ")
+	if !on {
+		out = AddTerm(out, fuzzyOffTerm)
+	}
+
+	return out
 }

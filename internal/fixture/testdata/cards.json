@@ -362,6 +362,7 @@
       "skirmish": 0
     },
     "flags": [
+      "houseless",
       "skybeast"
     ],
     "printings": [
@@ -462,21 +463,23 @@
     ]
   },
   {
-    "id": "ghostform-saurian",
+    "id": "ghostform",
     "title": "Ghostform",
     "folded": "ghostform",
-    "house": "saurian",
     "type": "upgrade",
     "text": "This creature gains elusive and \"Destroyed: Return this creature to its owner’s hand.\"",
     "printings": [
       {
-        "set": "anomalyexpansion",
+        "set": "worldscollide",
         "number": "A01",
-        "rarity": "Special",
+        "rarity": "FIXED",
         "anomaly": true,
-        "image": "anomalyexpansion/A01.webp",
+        "image": "worldscollide/A01.webp",
         "mv_ids": []
       }
+    ],
+    "flags": [
+      "houseless"
     ]
   },
   {

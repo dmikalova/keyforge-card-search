@@ -4,7 +4,6 @@ package server
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"math/rand/v2"
 	"net/http"
@@ -26,19 +25,19 @@ const maxQuery = 2000
 
 // Server serves the search pages.
 type Server struct {
-	engine *search.Engine
-	log    *slog.Logger
+	src catalog.Source
+	log *slog.Logger
 	// seed gives the seed of a "sort:random" query without one.
 	seed func() uint64
 }
 
-// New returns a Server for the engine. A nil logger means slog.Default.
-func New(engine *search.Engine, log *slog.Logger) *Server {
+// New returns a Server for the source. A nil logger means slog.Default.
+func New(src catalog.Source, log *slog.Logger) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
 
-	return &Server{engine: engine, log: log, seed: rand.Uint64}
+	return &Server{src: src, log: log, seed: rand.Uint64}
 }
 
 // Handler returns the routes.
@@ -53,10 +52,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.HandleFunc("GET /api/cards", s.export)
 	mux.Handle("GET /static/", web.StaticHandler())
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = io.WriteString(w, "ok")
-	})
+	mux.HandleFunc("GET /health", s.health)
 
 	return securityHeaders(mux)
 }
@@ -83,13 +79,24 @@ func queryOf(r *http.Request) string {
 // page renders the search page with the first batch.
 func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	q := queryOf(r)
+
+	// The query form sends fz=1 and the Fuzzy box. Put the box's state in
+	// the query, so the URL holds it.
+	if r.URL.Query().Get("fz") == "1" {
+		on := r.URL.Query().Get("fuzzy") == "on"
+		http.Redirect(w, r, web.SearchURL(search.SetFuzzy(q, on)), http.StatusSeeOther)
+
+		return
+	}
 	v := web.PageView{
 		Query:   q,
 		JSONURL: "/api/cards?q=" + web.QueryEscape(q),
 		Houses:  web.NewHouseLinks(q),
+		Missing: s.src.Missing(),
+		Fuzzy:   !web.FuzzyOff(q),
 	}
 
-	res, err := s.engine.Search(q)
+	res, err := s.src.Engine().Search(q)
 	switch {
 	case errors.Is(err, search.ErrNoSeed):
 		http.Redirect(w, r, web.SearchURL(search.WithSeed(q, s.seed())), http.StatusSeeOther)
@@ -139,7 +146,7 @@ func (s *Server) batch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := s.engine.Search(q)
+	res, err := s.src.Engine().Search(q)
 	if err != nil {
 		http.Error(w, "bad query", http.StatusBadRequest)
 
@@ -169,9 +176,9 @@ func (s *Server) batch(w http.ResponseWriter, r *http.Request) {
 
 // random sends the user to one random card of the query.
 func (s *Server) random(w http.ResponseWriter, r *http.Request) {
-	res, err := s.engine.Search(queryOf(r))
+	res, err := s.src.Engine().Search(queryOf(r))
 	if err != nil || len(res.Items) == 0 {
-		res, err = s.engine.Search("")
+		res, err = s.src.Engine().Search("")
 	}
 
 	if err != nil || len(res.Items) == 0 {
@@ -244,9 +251,9 @@ func toExport(p *card.Printing) exportPrinting {
 func (s *Server) export(w http.ResponseWriter, r *http.Request) {
 	q := queryOf(r)
 
-	res, err := s.engine.Search(q)
+	res, err := s.src.Engine().Search(q)
 	if errors.Is(err, search.ErrNoSeed) {
-		res, err = s.engine.Search(search.WithSeed(q, s.seed()))
+		res, err = s.src.Engine().Search(search.WithSeed(q, s.seed()))
 	}
 
 	if err != nil {
@@ -291,5 +298,22 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, c templ.Componen
 
 	if err := c.Render(r.Context(), w); err != nil {
 		s.log.Warn("render a page", "error", err)
+	}
+}
+
+// health reports the dataset version and the number of cards.
+func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
+	e := s.src.Engine()
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+
+	if err := json.NewEncoder(w).Encode(map[string]any{
+		"status":    "ok",
+		"version":   e.Version(),
+		"generated": e.Generated(),
+		"cards":     e.Len(),
+		"missing":   s.src.Missing(),
+	}); err != nil {
+		s.log.Warn("write the health", "error", err)
 	}
 }

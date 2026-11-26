@@ -14,8 +14,9 @@ Run `mage ci:fix && mage ci:check` before you call work done. It must print
 
 | Path               | Role                                                         |
 | ------------------ | ------------------------------------------------------------ |
-| `cmd/search`       | The Cloud Run entrypoint: load the catalog, serve            |
-| `internal/catalog` | The card data behind the `Catalog` interface, and image URLs |
+| `cmd/search`       | The Cloud Run entrypoint: start the dataset loader, serve    |
+| `internal/catalog` | The dataset loader (`DATASET_URL`, ETag), and image URLs     |
+| `internal/fixture` | The hand-written dataset for local work and tests            |
 | `internal/search`  | The query fields, the default printing, the sort, the facets |
 | `internal/server`  | The routes: page, batch, random, syntax, JSON export         |
 | `internal/web`     | templ pages, view models, and the embedded static files      |
@@ -26,9 +27,11 @@ Run `mage ci:fix && mage ci:check` before you call work done. It must print
   state that the URL does not hold. `sort:random` gets a `seed:` by redirect.
 - **The query language is in keyforge-data.** Add a field in
   `internal/search/fields.go`. Change the grammar in keyforge-data/query.
-- **The fixture is not card data.** `internal/catalog/testdata/cards.json` is
+- **The fixture is not card data.** `internal/fixture/testdata/cards.json` is
   hand-written for the special cases. Some of its numbers and texts are made
-  up. Replace it with the keyforge-data dataset when the dataset exists.
+  up. The site serves it only when `DATASET_URL` is not set.
+- **Do not embed the dataset.** The site reads it from the public bucket, so
+  a new dataset needs no deploy.
 - **Commit the generated templ code.** Run `mage templ` after you edit a
   `.templ` file.
 - **Keep the JavaScript small.** Datastar loads the batches.

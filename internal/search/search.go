@@ -1,6 +1,10 @@
-// Package search runs a query on the catalog in memory (ADR 0002). It wires
-// the card fields into the keyforge-data query registry, picks the default
-// printing of each card, sorts the results, and counts the facets.
+// Package search runs a query on the dataset in memory (ADR 0002). It wires
+// the card fields into the keyforge-data query registry, picks the printing
+// that each result shows, sorts the results, and counts the facets.
+//
+// A query matches cards, not printings: a term matches a card if one of the
+// card's printings matches it. So "s:aoa s:wc" gives the cards that have a
+// printing in AoA and a printing in WC.
 package search
 
 import (
@@ -10,6 +14,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dmikalova/keyforge-data/card"
 	"github.com/dmikalova/keyforge-data/query"
@@ -20,6 +25,11 @@ import (
 type Item struct {
 	Card     *card.Card
 	Printing *card.Printing
+	// Set is the set of the printing. Its slug is the printing's set slug if
+	// the dataset does not list the set.
+	Set sets.Set
+	// SetIndex is the position of the set in the dataset's sets, or -1.
+	SetIndex int
 }
 
 // Result is the outcome of a query.
@@ -35,43 +45,82 @@ type Result struct {
 // caller adds a seed to the query, so the URL holds the order.
 var ErrNoSeed = errors.New("search: sort:random needs a seed")
 
-// Engine searches one catalog.
+// Engine searches one dataset.
 type Engine struct {
-	reg     *query.Registry[*Entry]
-	entries []*Entry
+	reg *query.Registry[*Entry]
+	// cards has one entry per card, with all its printings.
+	cards []*Entry
+	// prints has one entry per printing of each card, in the order of the
+	// card's printings.
+	prints  map[*card.Card][]*Entry
+	sets    []sets.Set
+	setRank map[string]int
+	version string
+	at      time.Time
 }
 
-// New returns an engine for the cards. The engine keeps the cards.
-func New(cards []card.Card) (*Engine, error) {
-	reg, err := query.NewRegistry(fields(cards), flags(cards))
+// New returns an engine for the dataset. The engine keeps the dataset.
+func New(ds *card.Dataset) (*Engine, error) {
+	setList := ds.Sets
+	if len(setList) == 0 {
+		setList = datasetSets(ds.Cards)
+	}
+
+	e := &Engine{
+		sets:    setList,
+		setRank: map[string]int{},
+		prints:  map[*card.Card][]*Entry{},
+		version: ds.Version,
+		at:      ds.Generated,
+	}
+	for i, s := range setList {
+		e.setRank[s.Slug] = i
+	}
+
+	reg, err := query.NewRegistry(e.fields(ds.Cards), e.flags(ds.Cards))
 	if err != nil {
 		return nil, err
 	}
 
-	e := &Engine{reg: reg}
+	e.reg = reg
 
-	for i := range cards {
-		c := &cards[i]
-
-		first := 0
-
-		for j := range c.Printings {
-			if setIndex(c.Printings[j].Set) < setIndex(c.Printings[first].Set) {
-				first = j
-			}
-		}
+	for i := range ds.Cards {
+		c := &ds.Cards[i]
+		first := e.firstSet(c)
+		all := &Entry{Card: c, FirstSet: first}
 
 		for j := range c.Printings {
-			e.entries = append(e.entries, &Entry{
-				Card:     c,
-				Printing: &c.Printings[j],
-				SetIndex: setIndex(c.Printings[j].Set),
-				First:    j == first,
+			p := &c.Printings[j]
+			all.Printings = append(all.Printings, p)
+			e.prints[c] = append(e.prints[c], &Entry{
+				Card: c, Printings: []*card.Printing{p}, FirstSet: first,
 			})
 		}
+
+		e.cards = append(e.cards, all)
 	}
 
 	return e, nil
+}
+
+// Version returns the dataset version.
+func (e *Engine) Version() string {
+	return e.version
+}
+
+// Generated returns the time that the dataset was made.
+func (e *Engine) Generated() time.Time {
+	return e.at
+}
+
+// Len returns the number of cards.
+func (e *Engine) Len() int {
+	return len(e.cards)
+}
+
+// Sets returns the dataset's sets, oldest first.
+func (e *Engine) Sets() []sets.Set {
+	return e.sets
 }
 
 // Schema returns the query schema, for the syntax page and autocomplete.
@@ -92,70 +141,188 @@ func (e *Engine) Search(src string) (*Result, error) {
 	}
 
 	match := e.reg.Match(q)
+	show := e.printingFilter(q)
+	prints := isDirective(q, DirUnique, "prints")
 
-	var matched []*Entry
+	var items []Item
 
-	for _, en := range e.entries {
-		if match(en) {
-			matched = append(matched, en)
+	for _, en := range e.cards {
+		if !match(en) {
+			continue
 		}
-	}
 
-	items := group(matched, isDirective(q, DirUnique, "prints"))
+		items = append(items, e.shown(en.Card, show, prints)...)
+	}
 
 	if err := e.sortItems(q, items); err != nil {
 		return nil, err
 	}
 
-	return &Result{Query: q, Items: items, Facets: count(items)}, nil
+	return &Result{Query: q, Items: items, Facets: e.count(items)}, nil
 }
 
-// group makes the results. With prints, each entry is a result. Otherwise
-// each card is one result with its default printing: the newest set, and a
-// printing that is not an anomaly before one that is.
-func group(entries []*Entry, prints bool) []Item {
+// shown returns the results of a matched card. The candidates are the
+// printings that the first test of show selects that selects any; if no
+// test selects a printing, every printing is a candidate. With prints, each candidate is a result. Otherwise the
+// result is the best candidate: the newest set, and a printing that is not
+// an anomaly before one that is.
+func (e *Engine) shown(c *card.Card, show []func(*Entry) bool, prints bool) []Item {
+	all := e.prints[c]
+
+	var picked []*Entry
+
+	for _, test := range show {
+		for _, p := range all {
+			if test(p) {
+				picked = append(picked, p)
+			}
+		}
+
+		if len(picked) > 0 {
+			break
+		}
+	}
+
+	if len(picked) == 0 {
+		picked = all
+	}
+
 	if prints {
-		out := make([]Item, len(entries))
-		for i, en := range entries {
-			out[i] = Item{Card: en.Card, Printing: en.Printing}
+		out := make([]Item, len(picked))
+		for i, p := range picked {
+			out[i] = e.item(c, p.Printings[0])
 		}
 
 		return out
 	}
 
-	best := map[*card.Card]*Entry{}
-
-	var order []*card.Card
-
-	for _, en := range entries {
-		cur, ok := best[en.Card]
-		if !ok {
-			order = append(order, en.Card)
-			best[en.Card] = en
-
-			continue
-		}
-
-		if better(en, cur) {
-			best[en.Card] = en
+	best := picked[0]
+	for _, p := range picked[1:] {
+		if e.better(p.Printings[0], best.Printings[0]) {
+			best = p
 		}
 	}
 
-	out := make([]Item, len(order))
-	for i, c := range order {
-		out[i] = Item{Card: c, Printing: best[c].Printing}
+	return []Item{e.item(c, best.Printings[0])}
+}
+
+func (e *Engine) item(c *card.Card, p *card.Printing) Item {
+	i := e.setIndex(p.Set)
+	s := sets.Set{Slug: p.Set, Code: p.Set, Name: p.Set}
+
+	if i >= 0 {
+		s = e.sets[i]
+	}
+
+	return Item{Card: c, Printing: p, Set: s, SetIndex: i}
+}
+
+// better reports whether a is a better default printing than b.
+func (e *Engine) better(a, b *card.Printing) bool {
+	if a.Anomaly != b.Anomaly {
+		return !a.Anomaly
+	}
+
+	return e.setIndex(a.Set) > e.setIndex(b.Set)
+}
+
+// printingFilter returns the tests of one printing from the query's printing
+// terms (set, rarity, number, flavor, and the printing flags) that are not
+// inside a NOT. The first test is the printing part of the query. The second
+// test matches a printing that matches any of the printing terms: with
+// "s:aoa s:wc" no printing is in both sets, so the result shows the newest
+// printing in AoA or WC. It returns nil if the query has no printing terms,
+// so the result shows the default printing.
+func (e *Engine) printingFilter(q *query.Query) []func(*Entry) bool {
+	n, ok := printingPart(q.Root)
+	if !ok {
+		return nil
+	}
+
+	strict := e.reg.Match(&query.Query{Root: n, Directives: q.Directives})
+
+	terms := printingTerms(n)
+	if len(terms) < 2 {
+		return []func(*Entry) bool{strict}
+	}
+
+	loose := e.reg.Match(&query.Query{
+		Root: &query.Or{Children: terms, Pos: n.Span()}, Directives: q.Directives,
+	})
+
+	return []func(*Entry) bool{strict, loose}
+}
+
+// printingTerms returns the terms in the printing part of a query.
+func printingTerms(n query.Node) []query.Node {
+	switch n := n.(type) {
+	case *query.Term:
+		return []query.Node{n}
+	case *query.And:
+		return childTerms(n.Children)
+	case *query.Or:
+		return childTerms(n.Children)
+	default:
+		return nil
+	}
+}
+
+func childTerms(nodes []query.Node) []query.Node {
+	var out []query.Node
+	for _, c := range nodes {
+		out = append(out, printingTerms(c)...)
 	}
 
 	return out
 }
 
-// better reports whether a is a better default printing than b.
-func better(a, b *Entry) bool {
-	if a.Printing.Anomaly != b.Printing.Anomaly {
-		return !a.Printing.Anomaly
+// printingPart returns the part of the node that tests printings: the node
+// itself if it is a printing term, the printing children of an AND, or an
+// OR whose children all test printings.
+func printingPart(n query.Node) (query.Node, bool) {
+	switch n := n.(type) {
+	case *query.Term:
+		return n, printingTerm(n)
+	case *query.And:
+		var keep []query.Node
+
+		for _, c := range n.Children {
+			if p, ok := printingPart(c); ok {
+				keep = append(keep, p)
+			}
+		}
+
+		switch len(keep) {
+		case 0:
+			return nil, false
+		case 1:
+			return keep[0], true
+		default:
+			return &query.And{Children: keep, Pos: n.Pos}, true
+		}
+	case *query.Or:
+		for _, c := range n.Children {
+			if _, ok := printingPart(c); !ok {
+				return nil, false
+			}
+		}
+
+		return n, true
+	default:
+		return nil, false
+	}
+}
+
+func printingTerm(t *query.Term) bool {
+	if t.Op == query.OpNe {
+		return false
 	}
 
-	return a.SetIndex > b.SetIndex
+	if t.Field == query.FlagField {
+		return slices.Contains(printingFlags, t.Value.Text)
+	}
+
+	return slices.Contains(printingFields, t.Field)
 }
 
 func isDirective(q *query.Query, name, value string) bool {
@@ -165,8 +332,9 @@ func isDirective(q *query.Query, name, value string) bool {
 }
 
 // sortItems puts the items in the order of the query. Without a sort
-// directive, a query of only name terms sorts by match quality. Otherwise
-// the order is house and name, with reference and houseless cards last.
+// directive, a query with name terms or bare words sorts by name match
+// quality. Otherwise the order is house and name, with reference and
+// houseless cards last.
 func (e *Engine) sortItems(q *query.Query, items []Item) error {
 	key, hasSort := q.Directive(DirSort)
 	desc := isDirective(q, DirOrder, "desc")
@@ -217,14 +385,12 @@ func (e *Engine) sortItems(q *query.Query, items []Item) error {
 }
 
 // fuzzyScores returns the name match quality of each item, and false if
-// the query is not only name terms.
+// the query has no name terms or bare words.
 func (e *Engine) fuzzyScores(q *query.Query, items []Item) (map[*card.Card]int, bool) {
 	scores := map[*card.Card]int{}
 
 	for _, it := range items {
-		en := &Entry{Card: it.Card, Printing: it.Printing}
-
-		s, ok := e.reg.FuzzyRank(q, en)
+		s, ok := e.reg.FuzzyRank(q, &Entry{Card: it.Card})
 		if !ok {
 			return nil, false
 		}
@@ -243,7 +409,7 @@ func byDefault(a, b Item) int {
 		cmp.Compare(a.Card.House, b.Card.House),
 		cmp.Compare(foldedOf(a.Card), foldedOf(b.Card)),
 		cmp.Compare(a.Card.ID, b.Card.ID),
-		cmp.Compare(setIndex(a.Printing.Set), setIndex(b.Printing.Set)),
+		cmp.Compare(a.SetIndex, b.SetIndex),
 		cmp.Compare(a.Printing.Number, b.Printing.Number),
 	)
 }
@@ -252,7 +418,7 @@ var sorters = map[string]func(a, b Item) int{
 	"name": func(a, b Item) int { return cmp.Compare(foldedOf(a.Card), foldedOf(b.Card)) },
 	"set": func(a, b Item) int {
 		return cmp.Or(
-			cmp.Compare(setIndex(a.Printing.Set), setIndex(b.Printing.Set)),
+			cmp.Compare(a.SetIndex, b.SetIndex),
 			cmp.Compare(a.Printing.Number, b.Printing.Number),
 		)
 	},
@@ -322,17 +488,35 @@ func compareBool(a, b bool) int {
 	}
 }
 
-// setIndex returns the position of the set in sets.All, or -1.
-func setIndex(slug string) int {
-	return slices.IndexFunc(sets.All, func(s sets.Set) bool { return s.Slug == slug })
+// setIndex returns the position of the set in the dataset's sets, or -1.
+func (e *Engine) setIndex(slug string) int {
+	if i, ok := e.setRank[slug]; ok {
+		return i
+	}
+
+	return -1
 }
 
-// SetOf returns the set of a slug.
-func SetOf(slug string) (sets.Set, bool) {
-	i := setIndex(slug)
+// firstSet returns the slug of the card's oldest printing.
+func (e *Engine) firstSet(c *card.Card) string {
+	first := ""
+
+	for _, p := range c.Printings {
+		i := e.setIndex(p.Set)
+		if first == "" || i >= 0 && i < e.setIndex(first) {
+			first = p.Set
+		}
+	}
+
+	return first
+}
+
+// SetOf returns the dataset's set of a slug.
+func (e *Engine) SetOf(slug string) (sets.Set, bool) {
+	i := e.setIndex(slug)
 	if i < 0 {
 		return sets.Set{}, false
 	}
 
-	return sets.All[i], true
+	return e.sets[i], true
 }

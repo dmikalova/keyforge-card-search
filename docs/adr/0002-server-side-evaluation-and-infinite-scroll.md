@@ -12,7 +12,9 @@ size. They are in the public bucket with a one-year immutable cache header.
 ## Decision
 
 - Evaluate queries on the server, in memory, with the keyforge-data
-  evaluator. The card data is embedded from keyforge-data.
+  evaluator. The site reads the card dataset from the public bucket
+  (`DATASET_URL`) at start and checks it every 5 minutes with an ETag. A new
+  dataset needs no deploy. On an error the site keeps the last good dataset.
 - Datastar requests a batch of about 60 results. The grid has a sentinel. An
   IntersectionObserver asks for the next batch when the sentinel comes within
   two viewports. Images use `loading="lazy"` and fixed-aspect placeholders.

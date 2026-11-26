@@ -14,7 +14,7 @@ templ page(title, description, query string) {
 			<meta property="og:description" content={ description }/>
 			<meta property="og:site_name" content="keyforge.cards"/>
 			<meta name="theme-color" content="#2b1d33"/>
-			<link rel="icon" type="image/webp" href={ Asset("img/favicon.webp") }/>
+			<link rel="icon" type="image/svg+xml" href={ Asset("img/favicon.svg") }/>
 			<link rel="preload" href="/static/font/TeutonFett-Regular.woff" as="font" type="font/woff" crossorigin/>
 			<link rel="stylesheet" href={ Asset("css/app.css") }/>
 			<script src={ Asset("js/search.js") } defer></script>
@@ -37,6 +37,11 @@ templ page(title, description, query string) {
 						spellcheck="false"
 						aria-label="Query"
 					/>
+					<input type="hidden" name="fz" value="1"/>
+					<label class="fuzzy" title="Fuzzy name matching: the letters in order">
+						<input id="fuzzy" name="fuzzy" type="checkbox" value="on" checked?={ !FuzzyOff(query) }/>
+						Fuzzy
+					</label>
 					<button type="submit" class="primary">Search</button>
 				</form>
 				<nav class="actions">

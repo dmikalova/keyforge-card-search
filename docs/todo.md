@@ -24,8 +24,10 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 
 ## Site 1.0
 
-- [ ] Replace the fixture catalog with the keyforge-data dataset (after phase 4
-  of the keyforge-data todo).
+- [x] Read the keyforge-data dataset from the public bucket at run time, and
+  reload it when it changes.
+- [x] Comma lists, card-level terms, match tiers, and the Fuzzy box.
+- [ ] Replace the anomaly mark placeholder (⚡) with the anomaly rarity icon.
 - [x] Page layout with the keyforge.cards purple and orange theme.
 - [x] The query box. Show parse errors at the token.
 - [ ] Autocomplete after `field:` and for field names.
