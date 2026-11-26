@@ -26,6 +26,10 @@ type CompleteField struct {
 	// NumKeys are the keys of a keyed field that take a number:
 	// keyword:assault>=2. The bar suggests the operators after them.
 	NumKeys []string `json:"numkeys,omitempty"`
+	// Labels are the names to show next to values, by value: the full set
+	// name next to "wc", "Token Creature" next to "tokencreature". The bar
+	// also matches the typed text against them.
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // Completions are the field names and the values that the search bar
@@ -60,14 +64,27 @@ func (e *Engine) Completions() Completions {
 		case f.Name == DirSort:
 			cf.Values, cf.List = sortKeys, true
 		case f.Name == "set" || f.Name == "first":
+			cf.Labels = map[string]string{}
+
 			for _, s := range e.sets {
-				cf.Values = append(cf.Values, strings.ToLower(s.Code))
+				code := strings.ToLower(s.Code)
+				cf.Values = append(cf.Values, code)
+				cf.Labels[code] = s.Name
 			}
 
 			cf.List = true
 		case f.Kind == query.KindEnum || f.Kind == query.KindFlag || f.Kind == query.KindKeyed:
 			for _, v := range f.Values {
-				cf.Values = append(cf.Values, query.Normalize(v))
+				n := query.Normalize(v)
+				cf.Values = append(cf.Values, n)
+
+				if label := valueLabel(f.Name, v); label != n {
+					if cf.Labels == nil {
+						cf.Labels = map[string]string{}
+					}
+
+					cf.Labels[n] = label
+				}
 			}
 
 			cf.List = true
@@ -132,4 +149,18 @@ func numericKeys(f query.FieldInfo) []string {
 	}
 
 	return nil
+}
+
+// valueLabel returns the name to show for an enum value: the type with a
+// capital letter, the rarity and the other values as the dataset has them.
+func valueLabel(field, v string) string {
+	if field == "type" {
+		return TypeLabel(v)
+	}
+
+	if field == "house" {
+		return HouseLabel(v)
+	}
+
+	return v
 }

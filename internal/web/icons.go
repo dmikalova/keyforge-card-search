@@ -68,9 +68,14 @@ func HouseIcon(slug, label string) Icon {
 	return Icon{URL: iconBase + "house/" + slug + ".webp", Label: label}
 }
 
-// RarityIcon returns the icon of a rarity, or the zero Icon.
+// RarityIcon returns the icon of a rarity, or the zero Icon. The rarity Token
+// Creature uses the token creature type icon.
 func RarityIcon(rarity string) Icon {
 	r := strings.ToLower(rarity)
+	if r == "token creature" {
+		return Icon{URL: iconBase + "type/tokencreature.svg", Mask: true, Label: rarity}
+	}
+
 	if !rarityIcons[r] {
 		return Icon{}
 	}

@@ -277,10 +277,14 @@
       }
       if (f.name === "sort" && w[vs] === "-") vs++;
       const p = fold(w.slice(vs));
-      const starts = f.values.filter((v) => fold(v).startsWith(p));
-      const has = f.values.filter((v) => !fold(v).startsWith(p) && fold(v).includes(p));
+      // A value matches by its query text or by its label: "worlds" finds
+      // wc, whose label is "Worlds Collide".
+      const label = (v) => (f.labels && f.labels[v]) || "";
+      const starts = f.values.filter((v) => fold(v).startsWith(p) || fold(label(v)).startsWith(p));
+      const has = f.values.filter((v) => !starts.includes(v) &&
+        (fold(v).includes(p) || fold(label(v)).includes(p)));
       items = starts.concat(has).filter((v) => fold(v) !== p)
-        .map((v) => ({ text: v, insert: v, note: "" }));
+        .map((v) => ({ text: v, insert: v, note: label(v) }));
       from = start + neg + vs;
     } else {
       const p = w.toLowerCase();

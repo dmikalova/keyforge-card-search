@@ -160,6 +160,14 @@ func TestCompletions(t *testing.T) {
 		t.Errorf("house = %+v", h)
 	}
 
+	if s := find("set"); s.Labels["wc"] != "Worlds Collide" {
+		t.Errorf("set labels = %+v", s.Labels)
+	}
+
+	if ty := find("type"); ty.Labels["creature"] != "Creature" {
+		t.Errorf("type labels = %+v", ty.Labels)
+	}
+
 	// The bar suggests the comparison operators only where a number goes.
 	if k := find(
 		"keyword",

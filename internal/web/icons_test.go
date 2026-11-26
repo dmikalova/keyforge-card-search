@@ -67,6 +67,10 @@ func TestIcons(t *testing.T) {
 		t.Errorf("variant has no icon: %+v", i)
 	}
 
+	if i := RarityIcon("Token Creature"); !strings.HasSuffix(i.URL, "type/tokencreature.svg") {
+		t.Errorf("token creature rarity icon: %+v", i)
+	}
+
 	if i := SetIcon("moremutation", "MoMu"); i.URL != "" {
 		t.Errorf("more mutation has no icon: %+v", i)
 	}

@@ -295,7 +295,7 @@ func (v CardView) Current() PrintView {
 	return PrintView{}
 }
 
-// NewCardView makes the card view. setName gives the set code of a slug,
+// NewCardView makes the card view. setName gives the full set name of a slug,
 // and find gives the other cards of the mentions and the threads.
 func NewCardView(c *card.Card, shown int, setName func(string) string, find Lookup) CardView {
 	v := CardView{

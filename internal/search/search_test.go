@@ -3,6 +3,7 @@ package search
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/dmikalova/keyforge-data/query"
@@ -344,5 +345,52 @@ func TestHouseFacetBuckets(t *testing.T) {
 	want := []string{"Other=h:none"}
 	if !slices.Equal(got, want) {
 		t.Errorf("house facet = %v, want %v", got, want)
+	}
+}
+
+func TestFacetLabels(t *testing.T) {
+	r, err := engine(t).Search("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, c := range r.Facets.Types {
+		if c.Label != TypeLabel(c.Value) || c.Label[:1] == strings.ToLower(c.Label[:1]) {
+			t.Errorf("type label %q for %q", c.Label, c.Value)
+		}
+	}
+
+	found := false
+
+	for _, c := range r.Facets.Sets {
+		if c.Value == "WC" {
+			found = true
+
+			if c.Label != "Worlds Collide" || c.Term != "s:WC" {
+				t.Errorf("set = %+v", c)
+			}
+		}
+	}
+
+	if !found {
+		t.Errorf("no WC in the set facet: %+v", r.Facets.Sets)
+	}
+
+	// The code, the slug, and the full name select the same set.
+	want := -1
+
+	for _, q := range []string{"s:wc", "set:WC", "set:worldscollide", `set:"Worlds Collide"`} {
+		res, err := engine(t).Search(q)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if want < 0 {
+			want = len(res.Items)
+		}
+
+		if len(res.Items) != want || want == 0 {
+			t.Errorf("%s: %d cards, want %d", q, len(res.Items), want)
+		}
 	}
 }

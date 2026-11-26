@@ -98,11 +98,11 @@ func (e *Engine) count(items []Item) Facets {
 		Houses: counts(houses, "h", HouseLabel, func(a, b string) int {
 			return cmp.Or(cmp.Compare(bucketRank(a), bucketRank(b)), cmp.Compare(a, b))
 		}),
-		Types: counts(types, "t", strings.ToLower, cmp.Compare[string]),
+		Types: counts(types, "t", TypeLabel, cmp.Compare[string]),
 		Rarities: counts(rarities, "r", func(s string) string { return s }, func(a, b string) int {
 			return cmp.Or(cmp.Compare(rarityRank(a), rarityRank(b)), cmp.Compare(a, b))
 		}),
-		Sets: counts(setCounts, "s", func(s string) string { return s }, func(a, b string) int {
+		Sets: counts(setCounts, "s", e.setLabel, func(a, b string) int {
 			return cmp.Or(cmp.Compare(e.codeIndex(a), e.codeIndex(b)), cmp.Compare(a, b))
 		}),
 		Power:     counts(power, "p", func(s string) string { return s }, compareNumbers),
@@ -318,4 +318,23 @@ func (e *Engine) setCodes(c *card.Card) []string {
 	}
 
 	return out
+}
+
+// TypeLabel returns a card type for people, with a capital letter: "action"
+// becomes "Action". Queries match types in any case.
+func TypeLabel(t string) string {
+	if t == "" {
+		return t
+	}
+
+	return strings.ToUpper(t[:1]) + t[1:]
+}
+
+// setLabel returns the full name of the set with the code, or the code.
+func (e *Engine) setLabel(code string) string {
+	if j := e.codeIndex(code); j < len(e.sets) {
+		return e.sets[j].Name
+	}
+
+	return code
 }

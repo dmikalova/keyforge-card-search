@@ -178,9 +178,9 @@ func (s *Server) cardView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setCode := func(slug string) string {
+	setName := func(slug string) string {
 		if set, ok := e.SetOf(slug); ok {
-			return set.Code
+			return set.Name
 		}
 
 		return slug
@@ -188,7 +188,7 @@ func (s *Server) cardView(w http.ResponseWriter, r *http.Request) {
 
 	sse := datastar.NewSSE(w, r)
 	if err := sse.PatchElementTempl(
-		web.Zoom(web.NewCardView(c, shown, setCode, e.Card)),
+		web.Zoom(web.NewCardView(c, shown, setName, e.Card)),
 	); err != nil {
 		s.log.Warn("send the card", "error", err)
 

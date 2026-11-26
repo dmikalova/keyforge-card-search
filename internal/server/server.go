@@ -99,7 +99,7 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	// card=ID opens the card view of the card, so a link to a card and a
 	// reload with the card view open work.
 	if c := e.Card(r.URL.Query().Get("card")); c != nil {
-		cv := web.NewCardView(c, defaultPrint(c), s.setCode, e.Card)
+		cv := web.NewCardView(c, defaultPrint(c), s.setName, e.Card)
 		v.Card = &cv
 	}
 
@@ -336,10 +336,10 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// setCode returns the code of a set slug, or the slug.
-func (s *Server) setCode(slug string) string {
+// setName returns the full name of a set slug, or the slug.
+func (s *Server) setName(slug string) string {
 	if set, ok := s.src.Engine().SetOf(slug); ok {
-		return set.Code
+		return set.Name
 	}
 
 	return slug
