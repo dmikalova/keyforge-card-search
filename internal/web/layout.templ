@@ -1,0 +1,55 @@
+package web
+
+// page is the HTML shell that every page shares.
+templ page(title, description, query string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title }</title>
+			<meta name="description" content={ description }/>
+			<meta property="og:type" content="website"/>
+			<meta property="og:title" content={ title }/>
+			<meta property="og:description" content={ description }/>
+			<meta property="og:site_name" content="keyforge.cards"/>
+			<meta name="theme-color" content="#2b1d33"/>
+			<link rel="icon" type="image/webp" href={ Asset("img/favicon.webp") }/>
+			<link rel="preload" href="/static/font/TeutonFett-Regular.woff" as="font" type="font/woff" crossorigin/>
+			<link rel="stylesheet" href={ Asset("css/app.css") }/>
+			<script src={ Asset("js/search.js") } defer></script>
+			<script type="module" src={ Asset("js/datastar.js") }></script>
+		</head>
+		<body>
+			<header class="top">
+				<a class="brand" href="/">
+					<img src={ Asset("img/kf-logo-flat.webp") } alt="KeyForge" width="120" height="40"/>
+					<span>card search</span>
+				</a>
+				<form class="query" action="/" method="get" role="search">
+					<input
+						id="q"
+						name="q"
+						type="search"
+						value={ query }
+						placeholder="Search cards: h:brobnar p>=5 or k:elusive"
+						autocomplete="off"
+						spellcheck="false"
+						aria-label="Query"
+					/>
+					<button type="submit" class="primary">Search</button>
+				</form>
+				<nav class="actions">
+					<a class="button" href={ templ.SafeURL("/random?q=" + QueryEscape(query)) } title="Random card (r)">Random</a>
+					<a class="button help" href="/syntax" title="Query syntax (?)" aria-label="Query syntax">?</a>
+				</nav>
+			</header>
+			{ children... }
+			<footer class="foot">
+				<p>
+					Unofficial fan site. KeyForge, its card text, and its card images are the property of Ghost Galaxy.
+				</p>
+			</footer>
+		</body>
+	</html>
+}

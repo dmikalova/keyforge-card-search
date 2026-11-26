@@ -1,0 +1,96 @@
+package web
+
+import "strconv"
+
+// SearchPage is the query page with the facets and the first batch.
+templ SearchPage(v PageView) {
+	@page(pageTitle(v.Query), "Search every KeyForge card by house, set, type, keyword, power, and more.", v.Query) {
+		<main class="search">
+			<details id="builder" class="builder">
+				<summary>Builder (b)</summary>
+				<p class="muted">The full builder comes later. Click a house to add it to the query.</p>
+				<div class="chips">
+					for _, h := range v.Houses {
+						<a class="chip" href={ templ.SafeURL(h.URL) }>{ h.Label }</a>
+					}
+				</div>
+			</details>
+			if v.Err != nil {
+				<div class="error" role="alert">
+					<p>{ v.Err.Msg }</p>
+					<p class="mark"><code>{ v.Err.Before }<mark>{ v.Err.At }</mark>{ v.Err.After }</code></p>
+					if v.Err.Suggest != "" {
+						<p>Did you mean <code>{ v.Err.Suggest }</code>?</p>
+					}
+				</div>
+			} else {
+				<div class="summary">
+					<p><strong>{ strconv.Itoa(v.Count) }</strong> { plural(v.Count, "card", "cards") }</p>
+					<label class="size">
+						Size
+						<input id="size" type="range" min="120" max="300" step="20" value="180" aria-label="Card size"/>
+					</label>
+					<a href={ templ.SafeURL(v.JSONURL) } download="cards.json">JSON</a>
+				</div>
+				<div class="layout">
+					<aside class="facets">
+						for _, g := range v.Facets {
+							@facetGroup(g)
+						}
+					</aside>
+					<section class="results">
+						<div id="grid" class="grid">
+							@Tiles(v.Tiles)
+						</div>
+						@Sentinel(v.Next)
+					</section>
+				</div>
+			}
+			<div id="zoom" class="zoom" hidden>
+				<img alt=""/>
+			</div>
+		</main>
+	}
+}
+
+templ facetGroup(g FacetGroup) {
+	<section class="facet">
+		<h2>{ g.Name }</h2>
+		<ul class={ templ.KV("histogram", g.Histogram) }>
+			for _, c := range g.Counts {
+				<li>
+					<a href={ templ.SafeURL(c.URL) }>
+						if g.Histogram {
+							<span class="bar" style={ barStyle(c.Percent) }></span>
+						}
+						<span class="label">{ c.Label }</span>
+						<span class="n">{ strconv.Itoa(c.N) }</span>
+					</a>
+				</li>
+			}
+		</ul>
+	</section>
+}
+
+// Tiles is a run of result tiles. A batch appends it to the grid.
+templ Tiles(tiles []Tile) {
+	for _, t := range tiles {
+		<button type="button" class="tile" data-full={ t.Image } title={ t.Title + " (" + t.Caption + ")" }>
+			if t.Image != "" {
+				<img src={ t.Image } alt={ t.Title } loading="lazy" decoding="async" width="300" height="420"/>
+			} else {
+				<span class="noimage">{ t.Title }</span>
+			}
+		</button>
+	}
+}
+
+// Sentinel asks for the next batch when it comes within two viewports of
+// the screen. With no next batch, it is an empty marker.
+templ Sentinel(next string) {
+	if next != "" {
+		<div id="sentinel" class="sentinel" data-on-intersect__once={ "@get('" + next + "')" }></div>
+	} else {
+		<div id="sentinel"></div>
+	}
+}

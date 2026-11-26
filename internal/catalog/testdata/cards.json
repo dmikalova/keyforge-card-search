@@ -1,0 +1,755 @@
+[
+  {
+    "id": "1-2-punch-brobnar",
+    "title": "1-2 Punch",
+    "folded": "1-2 punch",
+    "house": "brobnar",
+    "type": "action",
+    "text": "Play: Stun an enemy creature.\nIf that creature was already stunned, destroy it instead.",
+    "aember": 1,
+    "printings": [
+      {
+        "set": "ageofascension",
+        "number": "001",
+        "rarity": "Common",
+        "image": "ageofascension/001.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "3ll-i0t-staralliance",
+    "title": "3LL-I0T",
+    "folded": "3ll-i0t",
+    "house": "staralliance",
+    "type": "creature",
+    "traits": [
+      "robot"
+    ],
+    "text": "Play/After Fight/After Reap: You may play an upgrade from your discard pile on 3LL-I0T.\nScrap: Shuffle all upgrades from play into their owners' decks.",
+    "power": "4",
+    "printings": [
+      {
+        "set": "grimreminders",
+        "number": "239",
+        "rarity": "Uncommon",
+        "image": "grimreminders/239.webp",
+        "mv_ids": []
+      }
+    ],
+    "aliases": [
+      "elliot"
+    ]
+  },
+  {
+    "id": "a-ghost-in-the-sun-geistoid",
+    "title": "A Ghost in the Sun",
+    "folded": "a ghost in the sun",
+    "house": "geistoid",
+    "type": "action",
+    "text": "Play: For each forged key your opponent has, put a creature into play from your discard pile.",
+    "aember": 1,
+    "printings": [
+      {
+        "set": "aemberskies",
+        "number": "142",
+        "rarity": "Uncommon",
+        "image": "aemberskies/142.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "ace-jonavan-ekwidon",
+    "title": "Ace Jonavan",
+    "folded": "ace jonavan",
+    "house": "ekwidon",
+    "type": "creature",
+    "traits": [
+      "human",
+      "merchant"
+    ],
+    "text": "For each Aember on Ace Jonavan, keys cost +1 Aember.\nPlay: Capture 1 Aember.",
+    "power": "4",
+    "printings": [
+      {
+        "set": "aemberskies",
+        "number": "113",
+        "rarity": "Common",
+        "image": "aemberskies/113.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "adaptoid-logos",
+    "title": "Adaptoid",
+    "folded": "adaptoid",
+    "house": "logos",
+    "type": "creature",
+    "traits": [
+      "mutant"
+    ],
+    "text": "Enhance Capture Damage Draw.\nAfter you play a card with a bonus icon, for the remainder of the turn, Adaptoid gains (choose one): +2 armor, assault 2, or \"Fight: Steal 1A.\"",
+    "power": "4",
+    "printings": [
+      {
+        "set": "massmutation",
+        "number": "099",
+        "rarity": "Rare",
+        "image": "massmutation/099.webp",
+        "mv_ids": []
+      }
+    ],
+    "enhance": {
+      "capture": 1,
+      "damage": 1,
+      "draw": 1
+    }
+  },
+  {
+    "id": "administrator-pelith-sanctum",
+    "title": "Administrator Pelith",
+    "folded": "administrator pelith",
+    "house": "sanctum",
+    "type": "creature",
+    "traits": [
+      "human",
+      "recruiter"
+    ],
+    "text": "Enhance Sanctum.\nAfter Reap: You may move a friendly Sanctum creature anywhere in your battleline.",
+    "power": "3",
+    "printings": [
+      {
+        "set": "crucibleclash",
+        "number": "143",
+        "rarity": "Uncommon",
+        "image": "crucibleclash/143.webp",
+        "mv_ids": []
+      }
+    ],
+    "enhance": {
+      "sanctum": 1
+    }
+  },
+  {
+    "id": "agent-hoo-man-mars",
+    "title": "Agent Hoo-man",
+    "folded": "agent hoo-man",
+    "house": "mars",
+    "type": "creature",
+    "traits": [
+      "martian",
+      "agent"
+    ],
+    "text": "Elusive.\nReap: Choose a friendly non-Mars creature and an enemy non-Mars creature. Stun the chosen creatures.",
+    "power": "2",
+    "keywords": {
+      "elusive": 0
+    },
+    "printings": [
+      {
+        "set": "ageofascension",
+        "number": "160",
+        "rarity": "Common",
+        "image": "ageofascension/160.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "almsmaster-sanctum",
+    "title": "Almsmaster",
+    "folded": "almsmaster",
+    "house": "sanctum",
+    "type": "creature",
+    "traits": [
+      "human",
+      "knight"
+    ],
+    "text": "Deploy. Taunt.\nPlay: Each of Almsmaster's neighbors captures 1 Aember.",
+    "power": "4",
+    "armor": 1,
+    "keywords": {
+      "deploy": 0,
+      "taunt": 0
+    },
+    "printings": [
+      {
+        "set": "darktidings",
+        "number": "093",
+        "rarity": "Uncommon",
+        "image": "darktidings/093.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "ancient-bear-untamed",
+    "title": "Ancient Bear",
+    "folded": "ancient bear",
+    "house": "untamed",
+    "type": "creature",
+    "traits": [
+      "beast"
+    ],
+    "text": "Assault 2.",
+    "power": "5",
+    "keywords": {
+      "assault": 2
+    },
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "345",
+        "rarity": "Common",
+        "image": "callofthearchons/345.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "ant1-10ny-staralliance",
+    "title": "ANT1-10NY",
+    "folded": "ant1-10ny",
+    "house": "staralliance",
+    "type": "creature",
+    "traits": [
+      "robot"
+    ],
+    "text": "Play: Capture all of your opponent's A.\nAt the end of your turn, move 1A from ANT1-10NY to your opponent's pool.",
+    "power": "6",
+    "printings": [
+      {
+        "set": "massmutation",
+        "number": "318",
+        "rarity": "Uncommon",
+        "image": "massmutation/318.webp",
+        "mv_ids": []
+      }
+    ],
+    "aliases": [
+      "anthony"
+    ]
+  },
+  {
+    "id": "bad-penny-shadows",
+    "title": "Bad Penny",
+    "folded": "bad penny",
+    "house": "shadows",
+    "type": "creature",
+    "traits": [
+      "human",
+      "thief"
+    ],
+    "text": "Destroyed: Return Bad Penny to your hand.",
+    "power": "1",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "296",
+        "rarity": "Common",
+        "image": "callofthearchons/296.webp",
+        "mv_ids": [],
+        "flavor": "She always turns up."
+      }
+    ]
+  },
+  {
+    "id": "berserker-brobnar",
+    "title": "Berserker",
+    "folded": "berserker",
+    "house": "brobnar",
+    "type": "creature",
+    "traits": [
+      "human",
+      "warrior"
+    ],
+    "text": "Assault 1.\nAfter Fight: Destroy Berserker.",
+    "power": "2",
+    "keywords": {
+      "assault": 1
+    },
+    "flags": [
+      "tokencreature"
+    ],
+    "printings": [
+      {
+        "set": "tokensofchange",
+        "number": "T02",
+        "rarity": "Token",
+        "image": "tokensofchange/T02.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "brain-eater-logos",
+    "title": "Brain Eater",
+    "folded": "brain eater",
+    "house": "logos",
+    "type": "creature",
+    "traits": [
+      "cyborg",
+      "beast"
+    ],
+    "text": "After a creature is destroyed fighting Brain Eater, draw a card.",
+    "power": "6",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "137",
+        "rarity": "Uncommon",
+        "image": "callofthearchons/137.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "bumpsy-brobnar",
+    "title": "Bumpsy",
+    "folded": "bumpsy",
+    "house": "brobnar",
+    "type": "creature",
+    "traits": [
+      "giant"
+    ],
+    "text": "Play: Your opponent loses 1 Aember.",
+    "power": "5",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "030",
+        "rarity": "Common",
+        "image": "callofthearchons/030.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "charette-dis",
+    "title": "Charette",
+    "folded": "charette",
+    "house": "dis",
+    "type": "creature",
+    "traits": [
+      "demon"
+    ],
+    "text": "Play: Capture 3 Aember.",
+    "power": "4",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "081",
+        "rarity": "Common",
+        "image": "callofthearchons/081.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "cloudrunner",
+    "title": "Cloudrunner",
+    "folded": "cloudrunner",
+    "type": "creature",
+    "traits": [
+      "beast"
+    ],
+    "text": "Elusive. Skirmish.",
+    "power": "3",
+    "keywords": {
+      "elusive": 0,
+      "skirmish": 0
+    },
+    "flags": [
+      "skybeast"
+    ],
+    "printings": [
+      {
+        "set": "aemberskies",
+        "number": "S03",
+        "rarity": "Special",
+        "image": "aemberskies/S03.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "dodger-shadows",
+    "title": "Dodger",
+    "folded": "dodger",
+    "house": "shadows",
+    "type": "creature",
+    "traits": [
+      "elf",
+      "thief"
+    ],
+    "text": "Fight: Steal 1 Aember.",
+    "power": "5",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "308",
+        "rarity": "Common",
+        "image": "callofthearchons/308.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "dust-pixie-untamed",
+    "title": "Dust Pixie",
+    "folded": "dust pixie",
+    "house": "untamed",
+    "type": "creature",
+    "traits": [
+      "faerie"
+    ],
+    "text": "(Vanilla)",
+    "power": "1",
+    "aember": 2,
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "351",
+        "rarity": "Common",
+        "image": "callofthearchons/351.webp",
+        "mv_ids": []
+      },
+      {
+        "set": "massmutation",
+        "number": "376",
+        "rarity": "Common",
+        "mv_ids": [],
+        "flavor": "Pixies do not share."
+      }
+    ]
+  },
+  {
+    "id": "expect-the-unexpected",
+    "title": "Expect the Unexpected",
+    "folded": "expect the unexpected",
+    "type": "prophecy",
+    "text": "Fate: Discard your hand.",
+    "flags": [
+      "reference"
+    ],
+    "printings": [
+      {
+        "set": "propheticvisions",
+        "number": "P01",
+        "rarity": "Special",
+        "image": "propheticvisions/P01.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "gateway-to-dis-dis",
+    "title": "Gateway to Dis",
+    "folded": "gateway to dis",
+    "house": "dis",
+    "type": "action",
+    "text": "Play: Destroy each creature. Gain 3 chains.",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "059",
+        "rarity": "Common",
+        "image": "callofthearchons/059.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "ghostform-saurian",
+    "title": "Ghostform",
+    "folded": "ghostform",
+    "house": "saurian",
+    "type": "upgrade",
+    "text": "This creature gains elusive and \"Destroyed: Return this creature to its owner’s hand.\"",
+    "printings": [
+      {
+        "set": "anomalyexpansion",
+        "number": "A01",
+        "rarity": "Special",
+        "anomaly": true,
+        "image": "anomalyexpansion/A01.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "grey-monk-sanctum",
+    "title": "Grey Monk",
+    "folded": "grey monk",
+    "house": "sanctum",
+    "type": "creature",
+    "traits": [
+      "human",
+      "priest"
+    ],
+    "text": "Each friendly creature gets +1 armor.\nReap: Heal 2 damage from a creature.",
+    "power": "3",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "244",
+        "rarity": "Uncommon",
+        "image": "callofthearchons/244.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "krump-brobnar",
+    "title": "Krump",
+    "folded": "krump",
+    "house": "brobnar",
+    "type": "creature",
+    "traits": [
+      "giant"
+    ],
+    "text": "After an enemy creature is destroyed fighting Krump, its controller loses 1 Aember.",
+    "power": "6",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "039",
+        "rarity": "Common",
+        "image": "callofthearchons/039.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "krump-brobnar-evil-twin",
+    "title": "Krump",
+    "folded": "krump",
+    "house": "brobnar",
+    "type": "creature",
+    "traits": [
+      "giant"
+    ],
+    "text": "After an enemy creature is destroyed fighting Krump, its controller loses 2A.",
+    "power": "7",
+    "flags": [
+      "eviltwin"
+    ],
+    "printings": [
+      {
+        "set": "grimreminders",
+        "number": "E05",
+        "rarity": "Rare",
+        "image": "grimreminders/E05.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "mimic-gel-logos",
+    "title": "Mimic Gel",
+    "folded": "mimic gel",
+    "house": "logos",
+    "type": "creature",
+    "traits": [
+      "shapeshifter",
+      "mutant"
+    ],
+    "text": "Mimic Gel cannot be played unless there is another creature in play.\nMimic Gel enters play as a copy of a creature in play, and its power is X.",
+    "power": "X",
+    "printings": [
+      {
+        "set": "worldscollide",
+        "number": "170",
+        "rarity": "Rare",
+        "image": "worldscollide/170.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "mothergun-mars",
+    "title": "Mothergun",
+    "folded": "mothergun",
+    "house": "mars",
+    "type": "artifact",
+    "traits": [
+      "weapon"
+    ],
+    "text": "Action: Reveal any number of Mars cards from your hand. Deal damage to a creature equal to the number of Mars cards revealed this way.",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "187",
+        "rarity": "Common",
+        "image": "callofthearchons/187.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "niffle-ape-untamed",
+    "title": "Niffle Ape",
+    "folded": "niffle ape",
+    "house": "untamed",
+    "type": "creature",
+    "traits": [
+      "beast",
+      "niffle"
+    ],
+    "text": "While Niffle Ape is attacking, ignore taunt and elusive.",
+    "power": "3",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "363",
+        "rarity": "Common",
+        "image": "callofthearchons/363.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "pip-pip-logos",
+    "title": "Pip Pip",
+    "folded": "pip pip",
+    "house": "logos",
+    "type": "creature",
+    "traits": [
+      "human",
+      "scientist"
+    ],
+    "text": "After an enemy creature reaps, stun it.",
+    "power": "2",
+    "printings": [
+      {
+        "set": "ageofascension",
+        "number": "116",
+        "rarity": "Common",
+        "image": "ageofascension/116.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "sergeant-zakiel-sanctum",
+    "title": "Sergeant Zakiel",
+    "folded": "sergeant zakiel",
+    "house": "sanctum",
+    "type": "creature",
+    "traits": [
+      "human",
+      "knight"
+    ],
+    "text": "Play: You may ready and fight with a neighboring creature.",
+    "power": "4",
+    "armor": 1,
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "258",
+        "rarity": "Common",
+        "image": "callofthearchons/258.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "tribute-collector-geistoid",
+    "title": "Tribute Collector",
+    "folded": "tribute collector",
+    "house": "geistoid",
+    "type": "creature",
+    "traits": [
+      "specter",
+      "robot"
+    ],
+    "text": "Taunt.\nPlay/After Fight: A friendly creature captures 1 Aember.",
+    "power": "4",
+    "armor": 2,
+    "keywords": {
+      "taunt": 0
+    },
+    "printings": [
+      {
+        "set": "grimreminders",
+        "number": "141",
+        "rarity": "Uncommon",
+        "image": "grimreminders/141.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "tribute-saurian",
+    "title": "Tribute",
+    "folded": "tribute",
+    "house": "saurian",
+    "type": "action",
+    "text": "Play: The most powerful friendly creature captures 2A. You may exalt that creature to repeat the preceding effect.",
+    "aember": 1,
+    "printings": [
+      {
+        "set": "worldscollide",
+        "number": "196",
+        "rarity": "Common",
+        "image": "worldscollide/196.webp",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "troll-brobnar",
+    "title": "Troll",
+    "folded": "troll",
+    "house": "brobnar",
+    "type": "creature",
+    "traits": [
+      "giant"
+    ],
+    "text": "Reap: Troll heals 3 damage.",
+    "power": "8",
+    "printings": [
+      {
+        "set": "callofthearchons",
+        "number": "048",
+        "rarity": "Common",
+        "image": "callofthearchons/048.webp",
+        "mv_ids": [],
+        "flavor": "Troll smash."
+      },
+      {
+        "set": "vaultmasters2023",
+        "number": "271",
+        "rarity": "Common",
+        "mv_ids": []
+      }
+    ]
+  },
+  {
+    "id": "ultra-gravitron-logos",
+    "title": "Ultra Gravitron",
+    "folded": "ultra gravitron",
+    "house": "logos",
+    "type": "creature",
+    "traits": [
+      "robot"
+    ],
+    "text": "Gigantic.\nAfter Fight: Archive the top 10 cards of your deck.",
+    "power": "10",
+    "armor": 3,
+    "flags": [
+      "gigantic"
+    ],
+    "printings": [
+      {
+        "set": "massmutation",
+        "number": "125",
+        "rarity": "Rare",
+        "image": "massmutation/125.webp",
+        "mv_ids": []
+      }
+    ]
+  }
+]

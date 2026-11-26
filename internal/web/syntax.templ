@@ -1,0 +1,67 @@
+package web
+
+// SyntaxPage explains the query language (ADR 0001).
+templ SyntaxPage() {
+	@page("Query syntax · KeyForge card search", "The query syntax of the KeyForge card search.", "") {
+		<main class="syntax">
+			<h1>Query syntax</h1>
+			<p>Type terms in the query box. Terms next to each other must all match.</p>
+			<table>
+				<thead><tr><th>Query</th><th>Meaning</th></tr></thead>
+				<tbody>
+					@row("troll", "A bare word searches the name, the text, and the flavor text.")
+					@row("a b, a and b", "Both terms match.")
+					@row("a or b", "One of the terms matches.")
+					@row("not a, -a", "The term does not match.")
+					@row("( )", "Group terms: (h:dis or h:mars) t:action.")
+					@row("\"steal 2\"", "An exact phrase.")
+					@row("p>=3, p:2..4", "Compare a number with = != < <= > >=, or give a range.")
+				</tbody>
+			</table>
+			<h2>Fields</h2>
+			<table>
+				<thead><tr><th>Field</th><th>Alias</th><th>Example</th><th>Notes</th></tr></thead>
+				<tbody>
+					for _, f := range syntaxFields {
+						<tr>
+							<td><code>{ f.Name }</code></td>
+							<td><code>{ f.Alias }</code></td>
+							<td><a href={ templ.SafeURL(SearchURL(f.Example)) }><code>{ f.Example }</code></a></td>
+							<td>{ f.Notes }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+			<h2>Flags</h2>
+			<p>
+				<code>is:anomaly</code>, <code>is:reprint</code>, <code>is:new</code>,
+				<code>is:reference</code>, <code>is:tokencreature</code>, <code>is:gigantic</code>,
+				<code>is:eviltwin</code>, and the houseless kinds such as <code>is:skybeast</code>.
+				<code>s:gr -is:reprint</code> gives the cards that are new in Grim Reminders.
+			</p>
+			<h2>Directives</h2>
+			<p>
+				<code>sort:</code> name, set, house, type, rarity, power, armor, aember, enhance, or random.
+				<code>order:desc</code> reverses the order. <code>unique:prints</code> shows each printing.
+				<code>seed:</code> fixes the random order.
+			</p>
+			<h2>Keys</h2>
+			<table>
+				<tbody>
+					@row("/", "Go to the query box.")
+					@row("Esc", "Close the card, or leave the query box.")
+					@row("arrows, h j k l", "Move between cards.")
+					@row("Enter", "Open the card.")
+					@row("r", "Show a random card.")
+					@row("+ -", "Make the cards larger or smaller.")
+					@row("b", "Open or close the builder.")
+					@row("?", "Show this page.")
+				</tbody>
+			</table>
+		</main>
+	}
+}
+
+templ row(query, meaning string) {
+	<tr><td><code>{ query }</code></td><td>{ meaning }</td></tr>
+}

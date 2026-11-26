@@ -5,46 +5,48 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 
 ## Setup
 
-- Add `go.mod` (`github.com/dmikalova/keyforge-card-search`),
+- [x] Add `go.mod` (`github.com/dmikalova/keyforge-card-search`),
   `mklv.config.json` (`kind: cloudrun`), `lefthook.jsonc`, `paseo.json`,
   `AGENTS.md`, the Dockerfile, and the magefiles with the project-standards
   `ci` import.
-- Add the infra stack `infrastructure/gcp/apps/search` with the
+- [ ] Add the infra stack `infrastructure/gcp/apps/search` with the
   `cloud-run-app` module and `app_name = "search"` in the keyforge-cards zone.
   Do not add a database.
 
 ## Query engine (in keyforge-data/query)
 
-- Write the lexer, the parser, and the AST (ADR 0001).
-- Write the field registry and register the card fields.
-- Write the in-memory evaluator.
-- Write the fuzzy name match with match quality.
-- Add golden tests and a Go fuzz test for the parser. Add table tests for the
+- [x] Write the lexer, the parser, and the AST (ADR 0001).
+- [x] Write the field registry and register the card fields (`internal/search`).
+- [x] Write the in-memory evaluator.
+- [x] Write the fuzzy name match with match quality.
+- [x] Add golden tests and a Go fuzz test for the parser. Add table tests for the
   evaluator with a small set of fixture cards.
 
 ## Site 1.0
 
-- Page layout with the keyforge.cards purple and orange theme.
-- The query box. Show parse errors at the token.
-- Autocomplete after `field:` and for field names.
-- The builder:
+- [ ] Replace the fixture catalog with the keyforge-data dataset (after phase 4
+  of the keyforge-data todo).
+- [x] Page layout with the keyforge.cards purple and orange theme.
+- [x] The query box. Show parse errors at the token.
+- [ ] Autocomplete after `field:` and for field names.
+- [ ] The builder. A stub with house links is in place:
   - House icons and set icons, with all, none, and "exclude reprints".
   - Type and rarity chips.
   - Minimum and maximum for power, armor, and aember.
   - Keyword and trait lists, and the enhance count.
   - Name, text, and flavor boxes.
   - Sort and order.
-- The grid with batches, the sentinel, and lazy images (ADR 0002).
-- The card size slider.
-- The zoom view (click or tap to open and close).
-- The result count and the facets: house, type, rarity, and set counts, and
+- [x] The grid with batches, the sentinel, and lazy images (ADR 0002).
+- [x] The card size slider.
+- [x] The zoom view (click or tap to open and close).
+- [x] The result count and the facets: house, type, rarity, and set counts, and
   power and armor histograms.
-- `sort:random` with a seed in the URL. The random card button.
-- JSON export of the results, with absolute image URLs.
-- Keyboard shortcuts: `/`, `Esc`, the arrow keys and `hjkl`, `Enter`, `r`, `?`,
+- [x] `sort:random` with a seed in the URL. The random card button.
+- [x] JSON export of the results, with absolute image URLs.
+- [x] Keyboard shortcuts: `/`, `Esc`, the arrow keys and `hjkl`, `Enter`, `r`, `?`,
   `+`, `-`, `b`.
-- The `/syntax` page, linked from a `?` bubble.
-- A smoke e2e test with go-rod: load `/`, run a query, and count the tiles.
+- [x] The `/syntax` page, linked from a `?` bubble.
+- [ ] A smoke e2e test with go-rod: load `/`, run a query, and count the tiles.
 
 ## Launch
 
