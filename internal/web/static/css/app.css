@@ -43,6 +43,12 @@ input {
   font: inherit;
 }
 
+/* The hidden attribute always hides. A display rule, as on button, must not
+   show a hidden element (the #cardload button showed as an empty oval). */
+[hidden] {
+  display: none !important;
+}
+
 button,
 .button {
   cursor: pointer;

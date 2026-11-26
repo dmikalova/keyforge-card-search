@@ -44,7 +44,9 @@ type ErrorView struct {
 
 // FacetGroup is one facet with the links that add or remove its terms.
 type FacetGroup struct {
-	Name   string
+	Name string
+	// Icon is the icon next to the heading, or the zero Icon.
+	Icon   Icon
 	Counts []FacetLink
 	// More are the values after the first ones. The page shows them in a
 	// closed list.
@@ -170,7 +172,7 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 	terms, _ := e.Terms(q)
 
 	group := func(name string, counts []search.Count, long bool) FacetGroup {
-		g := FacetGroup{Name: name}
+		g := FacetGroup{Name: name, Icon: StatIcon(name)}
 		top := 0
 
 		for _, c := range counts {
@@ -209,6 +211,7 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 		group("Set", f.Sets, false),
 		group("Power", f.Power, false),
 		group("Armor", f.Armor, false),
+		group("Æmber", f.Aember, false),
 		group("Keyword", f.Keywords, false),
 		group("Ability", f.Abilities, false),
 		group("Trait", f.Traits, true),

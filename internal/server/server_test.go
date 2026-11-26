@@ -52,8 +52,10 @@ func TestPageShowsResultsAndFacets(t *testing.T) {
 		`data-signals="{&#34;q&#34;:&#34;house:brobnar&#34;}"`,
 		`class="tile"`,
 		`ageofascension/001.webp`,
-		`<h2>House</h2>`,
-		`<h2>Power</h2>`,
+		` House</h2>`,
+		`Power</h2>`,
+		`Æmber</h2>`,
+		`stat/aember.webp`,
 		`id="sentinel"`,
 	} {
 		if !strings.Contains(body, want) {

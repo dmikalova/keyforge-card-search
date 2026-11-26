@@ -64,7 +64,10 @@ templ ResultsView(r Results) {
 
 templ facetGroup(g FacetGroup) {
 	<section class="facet">
-		<h2>{ g.Name }</h2>
+		<h2>
+			@icon(g.Icon)
+			{ g.Name }
+		</h2>
 		<ul class="bars">
 			for _, c := range g.Counts {
 				@facetLink(c)

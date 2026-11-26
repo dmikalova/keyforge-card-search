@@ -228,6 +228,30 @@ func TestFacets(t *testing.T) {
 		t.Errorf("power = %+v", f.Power)
 	}
 
+	// The aember facet counts every card, in numeric order, and each term
+	// finds as many cards as its count.
+	all, err := engine(t).Search("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	total := 0
+	for i, c := range all.Facets.Aember {
+		total += c.N
+		if i > 0 && compareNumbers(all.Facets.Aember[i-1].Value, c.Value) >= 0 {
+			t.Errorf("aember order: %+v", all.Facets.Aember)
+		}
+
+		by, err := engine(t).Search(c.Term)
+		if err != nil || len(by.Items) != c.N {
+			t.Errorf("%s finds %d cards, the facet says %d (%v)", c.Term, len(by.Items), c.N, err)
+		}
+	}
+
+	if total != len(all.Items) {
+		t.Errorf("the aember facet counts %d of %d cards", total, len(all.Items))
+	}
+
 	r, err = engine(t).Search("is:gigantic or n=troll")
 	if err != nil {
 		t.Fatal(err)

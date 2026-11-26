@@ -35,6 +35,8 @@ type Facets struct {
 	// Power and Armor are histograms in numeric order. Power X is last.
 	Power []Count
 	Armor []Count
+	// Aember counts the cards by bonus aember, in numeric order.
+	Aember []Count
 	// Keywords, Abilities, and Traits count the cards that have each value,
 	// most first.
 	Keywords  []Count
@@ -49,6 +51,7 @@ func (e *Engine) count(items []Item) Facets {
 	setCounts := map[string]int{}
 	power := map[string]int{}
 	armor := map[string]int{}
+	aember := map[string]int{}
 	keywords := map[string]int{}
 	abilities := map[string]int{}
 	traits := map[string]int{}
@@ -83,6 +86,8 @@ func (e *Engine) count(items []Item) Facets {
 			traits[t]++
 		}
 
+		aember[strconv.Itoa(it.Card.Aember)]++
+
 		if p := it.Card.Power; p != nil {
 			power[p.String()]++
 			armor[strconv.Itoa(it.Card.Armor)]++
@@ -102,6 +107,7 @@ func (e *Engine) count(items []Item) Facets {
 		}),
 		Power:     counts(power, "p", func(s string) string { return s }, compareNumbers),
 		Armor:     counts(armor, "ar", func(s string) string { return s }, compareNumbers),
+		Aember:    counts(aember, "a", func(s string) string { return s }, compareNumbers),
 		Keywords:  counts(keywords, "k", keywordLabel, byCount(keywords)),
 		Abilities: counts(abilities, "ab", AbilityLabel, abilityOrder),
 		Traits:    counts(traits, "tr", traitLabel, byCount(traits)),
