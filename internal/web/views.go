@@ -62,8 +62,11 @@ type FacetLink struct {
 	URL string
 	// Term is the query term of the value.
 	Term string
-	// Active is true if the query has the term at the top level.
+	// Active is true if a top-level filter of the query selects the value,
+	// in any spelling.
 	Active bool
+	// Excluded is true if a top-level negated filter excludes the value.
+	Excluded bool
 	// Percent is the bar width: the count as a part of the largest count.
 	Percent int
 	// Icon is the icon of the value, or the zero Icon.
@@ -169,9 +172,21 @@ const facetTop = 12
 // NewFacets makes the facet groups of a result. Each link toggles its term
 // in the query.
 func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
-	terms, _ := e.Terms(q)
+	filters := e.Filters(q)
 
-	group := func(name string, counts []search.Count, long bool) FacetGroup {
+	excluded := filters.Excluded()
+
+	group := func(name, field string, counts []search.Count, long bool) FacetGroup {
+		// An excluded value has no results, so it gets a row with a count
+		// of 0. The row shows the exclusion, and a click removes it.
+		for _, x := range excluded {
+			if x.Field == field && !slices.ContainsFunc(counts, func(c search.Count) bool {
+				return strings.EqualFold(c.Value, x.Value)
+			}) {
+				counts = append(counts, e.ZeroCount(x.Field, x.Value))
+			}
+		}
+
 		g := FacetGroup{Name: name, Icon: StatIcon(name)}
 		top := 0
 
@@ -180,16 +195,22 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 		}
 
 		for i, c := range counts {
+			state, without := filters.State(c.Field, c.Value)
 			l := FacetLink{
-				Label:   c.Label,
-				N:       c.N,
-				Term:    c.Term,
-				Active:  e.HasTerm(terms, c.Term),
-				URL:     SearchURL(e.Toggle(q, c.Term)),
-				Percent: c.N * 100 / max(top, 1),
-				Icon:    facetIcon(name, c.Key, c.Label),
+				Label:    c.Label,
+				N:        c.N,
+				Term:     c.Term,
+				Active:   state == search.StateActive,
+				Excluded: state == search.StateExcluded,
+				URL:      SearchURL(e.Toggle(q, c.Term)),
+				Percent:  c.N * 100 / max(top, 1),
+				Icon:     facetIcon(name, c.Key, c.Label),
 			}
-			if long && i >= facetTop && !l.Active {
+			if state != search.StateNone {
+				l.URL = SearchURL(without)
+			}
+
+			if long && i >= facetTop && !l.Active && !l.Excluded {
 				g.More = append(g.More, l)
 			} else {
 				g.Counts = append(g.Counts, l)
@@ -205,16 +226,17 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 	var out []FacetGroup
 
 	for _, g := range []FacetGroup{
-		group("House", f.Houses, false),
-		group("Type", f.Types, false),
-		group("Rarity", f.Rarities, false),
-		group("Set", f.Sets, false),
-		group("Power", f.Power, false),
-		group("Armor", f.Armor, false),
-		group("Æmber", f.Aember, false),
-		group("Keyword", f.Keywords, false),
-		group("Ability", f.Abilities, false),
-		group("Trait", f.Traits, true),
+		group("House", "house", f.Houses, false),
+		group("Type", "type", f.Types, false),
+		group("Rarity", "rarity", f.Rarities, false),
+		group("Set", "set", f.Sets, false),
+		group("Power", "power", f.Power, false),
+		group("Armor", "armor", f.Armor, false),
+		group("Æmber", "aember", f.Aember, false),
+		group("Keyword", "keyword", f.Keywords, false),
+		group("Ability", "ability", f.Abilities, false),
+		group("Trait", "trait", f.Traits, true),
+		group("Artist", "artist", f.Artists, true),
 	} {
 		if len(g.Counts) > 0 {
 			out = append(out, g)
@@ -267,6 +289,8 @@ type PrintView struct {
 	// Flavor is the flavor text, one line in each element, with the names
 	// of other cards as links. An attribution ("—Name") is its own line.
 	Flavor [][]TextPart
+	// Artist is the artist of the printing, with diacritics, or empty.
+	Artist string
 }
 
 // RelatedView is one thread of related cards in the card view.
@@ -338,6 +362,7 @@ func NewCardView(c *card.Card, shown int, setName func(string) string, find Look
 			SetIcon: SetIcon(p.Set, setName(p.Set)),
 			Image:   catalog.ImageURL(p.Image),
 			Flavor:  flavorLines(p.Flavor, c),
+			Artist:  p.Artist,
 		})
 
 		r := printRarity(p)
@@ -441,6 +466,11 @@ var syntaxFields = []syntaxField{
 	{"armor", "ar", "ar>=1", ""},
 	{"aember", "a", "a>=2", "The bonus aember."},
 	{"enhance", "en", "en:capture>=1", "The Enhance icons, in total or by icon."},
+	{
+		"artist", "art", "art:fabio",
+		"The artist of a printing. Accents do not matter: art:fabio finds Fábio Perez. " +
+			"artist:none gives the printings without an artist. Some sets have no artists yet.",
+	},
 }
 
 // PageTitle returns the page title of a query.
@@ -502,8 +532,11 @@ func FirstCount(at, total int) int {
 const placeholder = "Search cards: h:brobnar p>=5 or k:elusive"
 
 func toggleTitle(c FacetLink) string {
-	if c.Active {
-		return "Remove " + c.Term
+	switch {
+	case c.Active:
+		return "Remove the filter " + c.Label
+	case c.Excluded:
+		return "Remove the exclusion of " + c.Label
 	}
 
 	return "Add " + c.Term
@@ -610,4 +643,9 @@ func commas(n int) string {
 		s = s[:i] + "," + s[i:]
 	}
 	return s
+}
+
+// ArtistTerm returns the query term for an artist: artist:"Fábio Perez".
+func ArtistTerm(name string) string {
+	return search.FieldArtist + `:"` + strings.ReplaceAll(name, `"`, "") + `"`
 }

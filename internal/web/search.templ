@@ -92,8 +92,8 @@ templ facetLink(c FacetLink) {
 	<li>
 		<a
 			href={ templ.SafeURL(c.URL) }
-			class={ templ.KV("active", c.Active) }
-			aria-pressed={ strconv.FormatBool(c.Active) }
+			class={ templ.KV("active", c.Active), templ.KV("excluded", c.Excluded) }
+			aria-pressed={ strconv.FormatBool(c.Active || c.Excluded) }
 			title={ toggleTitle(c) }
 			data-on:click__prevent={ action("toggle", "term", c.Term) }
 		>
@@ -195,6 +195,14 @@ templ Zoom(v CardView) {
 						</li>
 					}
 				</ul>
+				for _, p := range v.Sets {
+					if p.Artist != "" {
+						<p class="artist" data-print={ itoa(p.Index) } hidden?={ p.Index != v.Print }>
+							<span class="artist-label">Artist</span>
+							<a href={ templ.SafeURL(SearchURL(ArtistTerm(p.Artist))) }>{ p.Artist }</a>
+						</p>
+					}
+				}
 				for _, p := range v.Sets {
 					<p class="flavor" data-print={ itoa(p.Index) } hidden?={ p.Index != v.Print }>
 						for i, line := range p.Flavor {

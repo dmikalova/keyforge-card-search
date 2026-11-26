@@ -94,12 +94,13 @@
     b.click();
   };
 
-  // showPrinting shows the image and the flavor text of one printing.
+  // showPrinting shows the image, the flavor text, and the artist of one
+  // printing.
   const showPrinting = (btn) => {
     const z = zoom();
     const img = $("zoom-img");
     if (img && btn.dataset.img) img.src = btn.dataset.img;
-    for (const f of z.querySelectorAll(".flavor[data-print]")) {
+    for (const f of z.querySelectorAll(".flavor[data-print], .artist[data-print]")) {
       f.hidden = f.dataset.print !== btn.dataset.print;
     }
     for (const b of z.querySelectorAll(".printing")) {

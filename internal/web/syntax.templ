@@ -32,10 +32,11 @@ templ SyntaxContent() {
 					@row("s:aoa -s:wc", "A card in AoA that is not in WC.")
 					@row(`set:"Worlds Collide"`, "A set by its code (wc), its slug (worldscollide), or its full name.")
 					@row(`r:"token creature"`, "A value with a space goes in quotes. r:tokencreature is the same.")
+					@row("h:ek r:r t:act", "The start of a value is enough when one value starts with it: house:ekwidon rarity:Rare type:action. A whole value wins over a longer one. If more values start with it, the error lists them.")
 				</tbody>
 			</table>
 			<h2>The search bar</h2>
-			<p>The results change as you type. Click the search bar to see every field. After <code>field:</code>, the list shows the values of the field. After a field or a keyword that takes a number, such as <code>power:</code> or <code>keyword:assault</code>, the list shows the comparisons = != &lt; &lt;= &gt; &gt;= and the range form. The list completes the word at the caret, also in the middle of the query. Use the arrow keys to choose, Tab or Enter to take a suggestion, and Esc to close the list. Enter without a chosen suggestion runs the query. A click on a value in the side panel adds its term, and a second click removes it.</p>
+			<p>The results change as you type. Click the search bar to see every field. After <code>field:</code>, the list shows the values of the field. After a field or a keyword that takes a number, such as <code>power:</code> or <code>keyword:assault</code>, the list shows the comparisons = != &lt; &lt;= &gt; &gt;= and the range form. The list completes the word at the caret, also in the middle of the query. Use the arrow keys to choose, Tab or Enter to take a suggestion, and Esc to close the list. Enter without a chosen suggestion runs the query. A click on a value in the side panel adds its term. The side panel marks each value that the query filters on, in any spelling: h:dis and house:Dis mark Dis, and s:wc, set:worldscollide, and set:"Worlds Collide" mark Worlds Collide. A click on a marked value removes that filter, or only that value from a comma list. A value that the query excludes, such as -h:dis, is struck through, and a click removes the exclusion.</p>
 			<h2>Fields</h2>
 			<table>
 				<thead><tr><th>Field</th><th>Alias</th><th>Example</th><th>Notes</th></tr></thead>
@@ -61,7 +62,7 @@ templ SyntaxContent() {
 			<h2>Directives</h2>
 			<p>
 				<code>sort:</code> takes a list of keys: name, set, house, type, rarity, power, armor,
-				aember, enhance. Each key sorts the ties of the keys before it. A minus sign makes one key
+				aember, enhance, artist (printings without an artist last). Each key sorts the ties of the keys before it. A minus sign makes one key
 				descending: <a href={ templ.SafeURL(SearchURL("sort:set,-power,name")) }><code>sort:set,-power,name</code></a>.
 				<code>sort:random</code> shuffles the results, alone. <code>seed:</code> fixes the random order.
 				<code>order:desc</code> reverses the whole order. <code>unique:prints</code> shows each printing.

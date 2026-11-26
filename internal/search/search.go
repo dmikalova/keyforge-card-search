@@ -149,8 +149,8 @@ func (e *Engine) Search(src string) (*Result, error) {
 		return nil, err
 	}
 
-	match := e.reg.Match(q)
-	show := e.printingFilter(q)
+	match := e.reg.Match(forMatch(q))
+	show := e.printingFilter(forMatch(q))
 	prints := isDirective(q, DirUnique, "prints")
 
 	var items []Item
@@ -490,6 +490,13 @@ var sorters = map[string]func(a, b Item) int{
 	"aember": func(a, b Item) int { return cmp.Compare(a.Card.Aember, b.Card.Aember) },
 	"enhance": func(a, b Item) int {
 		return cmp.Compare(total(a.Card.Enhance), total(b.Card.Enhance))
+	},
+	// artist sorts by the shown printing's artist, folded. A printing
+	// without an artist sorts last.
+	"artist": func(a, b Item) int {
+		x, y := a.Printing.Artist, b.Printing.Artist
+
+		return cmp.Or(compareBool(x == "", y == ""), cmp.Compare(query.Fold(x), query.Fold(y)))
 	},
 }
 

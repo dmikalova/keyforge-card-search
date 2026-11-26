@@ -24,7 +24,7 @@ type Entry struct {
 }
 
 // printingFields are the fields that test a printing, not the card.
-var printingFields = []string{"set", "rarity", query.NumberField, "flavor"}
+var printingFields = []string{"set", "rarity", query.NumberField, "flavor", FieldArtist}
 
 // printingFlags are the flags that test a printing, not the card.
 var printingFlags = []string{FlagAnomaly, FlagReprint}
@@ -51,7 +51,8 @@ const (
 
 // The sort keys of the sort directive.
 var sortKeys = []string{
-	"name", "set", "house", "type", "rarity", "power", "armor", "aember", "enhance", "random",
+	"name", "set", "house", "type", "rarity", "power", "armor", "aember", "enhance", "artist",
+	"random",
 }
 
 // FieldGroup is the field of the groups of the cards without a house.
@@ -192,6 +193,13 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 		{
 			Name: "enhance", Alias: "en", Kind: query.KindKeyed,
 			Keyed: func(en *Entry) map[string]int { return en.Card.Enhance },
+		},
+		{
+			// The artist of each printing, folded for search: "artist:fabio"
+			// finds Fábio Perez. "artist:none" finds a printing without an
+			// artist (forMatch).
+			Name: FieldArtist, Alias: "art", Kind: query.KindText,
+			Strings: artists,
 		},
 		// The sort value is a comma list of sortKeys. Engine.Parse checks it.
 		{Name: DirSort, Kind: query.KindDirective},

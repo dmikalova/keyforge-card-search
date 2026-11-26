@@ -19,6 +19,8 @@ type Count struct {
 	// Label is the text to show, for example "Brobnar" or "GR".
 	Label string
 	N     int
+	// Field is the full name of the facet field, for example "house".
+	Field string
 	// Term is the query term that selects the value, for example "h:brobnar".
 	Term string
 	// Key names the icon of the value: the house, type, or set slug, or the
@@ -42,6 +44,9 @@ type Facets struct {
 	Keywords  []Count
 	Abilities []Count
 	Traits    []Count
+	// Artists count the cards that have a printing by each artist, most
+	// first. It is empty while the dataset has no artists.
+	Artists []Count
 }
 
 func (e *Engine) count(items []Item) Facets {
@@ -55,6 +60,7 @@ func (e *Engine) count(items []Item) Facets {
 	keywords := map[string]int{}
 	abilities := map[string]int{}
 	traits := map[string]int{}
+	artistCounts := map[string]int{}
 
 	// A set term matches a card that has a printing in the set, so the set
 	// facet counts each card one time in each set that it is in. The count
@@ -67,6 +73,10 @@ func (e *Engine) count(items []Item) Facets {
 
 			for _, code := range e.setCodes(it.Card) {
 				setCounts[code]++
+			}
+
+			for _, a := range cardArtists(it.Card) {
+				artistCounts[a]++
 			}
 		}
 
@@ -111,6 +121,12 @@ func (e *Engine) count(items []Item) Facets {
 		Keywords:  counts(keywords, "k", keywordLabel, byCount(keywords)),
 		Abilities: counts(abilities, "ab", AbilityLabel, abilityOrder),
 		Traits:    counts(traits, "tr", traitLabel, byCount(traits)),
+		Artists: counts(
+			artistCounts,
+			"art",
+			func(s string) string { return s },
+			byCount(artistCounts),
+		),
 	}
 
 	for _, cs := range [][]Count{f.Houses, f.Types, f.Rarities} {
@@ -140,7 +156,7 @@ func counts(
 	for i, k := range keys {
 		term := field + ":" + quote(k)
 
-		out[i] = Count{Value: k, Label: label(k), N: m[k], Term: term}
+		out[i] = Count{Value: k, Label: label(k), N: m[k], Term: term, Field: facetFields[field]}
 	}
 
 	return out
@@ -337,4 +353,24 @@ func (e *Engine) setLabel(code string) string {
 	}
 
 	return code
+}
+
+// facetFields maps the alias of each facet field to its full name.
+var facetFields = map[string]string{
+	"h": "house", "t": "type", "r": "rarity", "s": "set", "p": "power", "ar": "armor",
+	"a": "aember", "k": "keyword", "ab": "ability", "tr": "trait", "art": "artist",
+}
+
+// cardArtists returns the artists of a card's printings, one time each,
+// without the empty artist.
+func cardArtists(c *card.Card) []string {
+	var out []string
+
+	for _, p := range c.Printings {
+		if p.Artist != "" && !slices.Contains(out, p.Artist) {
+			out = append(out, p.Artist)
+		}
+	}
+
+	return out
 }

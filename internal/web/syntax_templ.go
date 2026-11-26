@@ -143,7 +143,11 @@ func SyntaxContent() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</tbody></table><h2>The search bar</h2><p>The results change as you type. Click the search bar to see every field. After <code>field:</code>, the list shows the values of the field. After a field or a keyword that takes a number, such as <code>power:</code> or <code>keyword:assault</code>, the list shows the comparisons = != &lt; &lt;= &gt; &gt;= and the range form. The list completes the word at the caret, also in the middle of the query. Use the arrow keys to choose, Tab or Enter to take a suggestion, and Esc to close the list. Enter without a chosen suggestion runs the query. A click on a value in the side panel adds its term, and a second click removes it.</p><h2>Fields</h2><table><thead><tr><th>Field</th><th>Alias</th><th>Example</th><th>Notes</th></tr></thead> <tbody>")
+		templ_7745c5c3_Err = row("h:ek r:r t:act", "The start of a value is enough when one value starts with it: house:ekwidon rarity:Rare type:action. A whole value wins over a longer one. If more values start with it, the error lists them.").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</tbody></table><h2>The search bar</h2><p>The results change as you type. Click the search bar to see every field. After <code>field:</code>, the list shows the values of the field. After a field or a keyword that takes a number, such as <code>power:</code> or <code>keyword:assault</code>, the list shows the comparisons = != &lt; &lt;= &gt; &gt;= and the range form. The list completes the word at the caret, also in the middle of the query. Use the arrow keys to choose, Tab or Enter to take a suggestion, and Esc to close the list. Enter without a chosen suggestion runs the query. A click on a value in the side panel adds its term. The side panel marks each value that the query filters on, in any spelling: h:dis and house:Dis mark Dis, and s:wc, set:worldscollide, and set:\"Worlds Collide\" mark Worlds Collide. A click on a marked value removes that filter, or only that value from a comma list. A value that the query excludes, such as -h:dis, is struck through, and a click removes the exclusion.</p><h2>Fields</h2><table><thead><tr><th>Field</th><th>Alias</th><th>Example</th><th>Notes</th></tr></thead> <tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -155,7 +159,7 @@ func SyntaxContent() templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(f.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 45, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 46, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -168,7 +172,7 @@ func SyntaxContent() templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(f.Alias)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 46, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 47, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -181,7 +185,7 @@ func SyntaxContent() templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(SearchURL(f.Example))).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 47, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 48, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -194,7 +198,7 @@ func SyntaxContent() templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(f.Example)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 47, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 48, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -207,7 +211,7 @@ func SyntaxContent() templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(f.Notes)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 48, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 49, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -218,14 +222,14 @@ func SyntaxContent() templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</tbody></table><h2>Flags</h2><p><code>is:anomaly</code> (a card with an anomaly printing), <code>is:reprint</code> (a card in more than one set), <code>is:houseless</code>, <code>is:reference</code>, <code>is:tokencreature</code>, <code>is:gigantic</code>, <code>is:eviltwin</code>, and the houseless kinds such as <code>is:skybeast</code>. <code>first:gr</code> gives the cards that are new in Grim Reminders.</p><h2>Directives</h2><p><code>sort:</code> takes a list of keys: name, set, house, type, rarity, power, armor, aember, enhance. Each key sorts the ties of the keys before it. A minus sign makes one key descending: <a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</tbody></table><h2>Flags</h2><p><code>is:anomaly</code> (a card with an anomaly printing), <code>is:reprint</code> (a card in more than one set), <code>is:houseless</code>, <code>is:reference</code>, <code>is:tokencreature</code>, <code>is:gigantic</code>, <code>is:eviltwin</code>, and the houseless kinds such as <code>is:skybeast</code>. <code>first:gr</code> gives the cards that are new in Grim Reminders.</p><h2>Directives</h2><p><code>sort:</code> takes a list of keys: name, set, house, type, rarity, power, armor, aember, enhance, artist (printings without an artist last). Each key sorts the ties of the keys before it. A minus sign makes one key descending: <a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(SearchURL("sort:set,-power,name"))).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 65, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 66, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
@@ -303,7 +307,7 @@ func row(query, meaning string) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 91, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 92, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -316,7 +320,7 @@ func row(query, meaning string) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(meaning)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 91, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `syntax.templ`, Line: 92, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {

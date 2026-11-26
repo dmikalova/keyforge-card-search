@@ -60,10 +60,16 @@ func (e *Engine) HasTerm(terms []string, term string) bool {
 	return slices.Contains(terms, e.canonical(term))
 }
 
-// Toggle returns the query without the term if the query has it at the top
-// level, or with the term added at the end. A query with a parse error gets
-// the term added.
+// Toggle returns the query without the facet filter of the term, if the
+// query has it at the top level in any spelling (Filters.State), or with the
+// term added at the end. A query with a parse error gets the term added.
 func (e *Engine) Toggle(src, term string) string {
+	if field, value, ok := e.facetRef(term); ok {
+		if state, without := e.Filters(src).State(field, value); state != StateNone {
+			return without
+		}
+	}
+
 	terms, err := e.Terms(src)
 	if err != nil {
 		return AddTerm(src, term)

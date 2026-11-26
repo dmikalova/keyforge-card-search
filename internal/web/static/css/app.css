@@ -264,7 +264,9 @@ main {
 
 .layout {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  /* Wide enough for the longest set name on one line ("Call of the
+     Archons", "Vault Masters 2023") with its icon and count. */
+  grid-template-columns: 250px minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -312,6 +314,8 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .bars .bar {
@@ -334,14 +338,24 @@ main {
   gap: 0.6rem;
 }
 
+/* A tile is the card itself: no background, border, or shadow behind
+   the image, so nothing shows at the transparent card corners or at the
+   transparent edges of a gigantic tile. The radius is the card corner:
+   4.5% of the width (about 13.5 px at 300 px), so it scales with the
+   size slider. The focus outline follows the radius. */
 .tile {
   position: relative;
   padding: 0;
   border: 0;
-  background: var(--card);
-  border-radius: calc(var(--radius) * 0.8);
+  background: none;
+  border-radius: 4.5% / 3.2%;
   aspect-ratio: 300 / 420;
   overflow: hidden;
+}
+
+/* A tile without an image shows its title on a card-shaped box. */
+.tile:has(.noimage) {
+  background: var(--card);
 }
 
 .tile:focus-visible {
@@ -415,7 +429,8 @@ main {
   height: auto;
   max-height: 80vh;
   object-fit: contain;
-  border-radius: var(--radius);
+  /* The card corner, as on the tiles. */
+  border-radius: 4.5% / 3.2%;
 }
 
 .zoom-info {
@@ -545,7 +560,7 @@ main {
 .related-card img {
   width: 60px;
   height: auto;
-  border-radius: 4px;
+  border-radius: 4.5% / 3.2%;
 }
 
 .related-card:hover span {
@@ -691,6 +706,19 @@ main {
   color: var(--primary);
 }
 
+/* An excluded value (a negated filter) has a dashed ring and a struck
+   label. A click removes the negation. */
+.facet a.excluded {
+  box-shadow: inset 0 0 0 1px var(--muted);
+  outline: 1px dashed var(--accent, var(--primary));
+  outline-offset: -1px;
+}
+
+.facet a.excluded .label {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 .facet .more summary {
   cursor: pointer;
   color: var(--muted);
@@ -780,5 +808,28 @@ main {
 
   .syntax-card table {
     font-size: 0.85rem;
+  }
+}
+
+/* The artist of the shown printing, under the sets. */
+.artist {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+.artist-label {
+  margin-right: 0.5rem;
+  color: var(--muted);
+}
+
+.artist a {
+  color: inherit;
+}
+
+/* On a phone the facets are narrow columns, so a long label wraps instead
+   of running into its count. */
+@media (max-width: 720px) {
+  .facet .label {
+    white-space: normal;
   }
 }

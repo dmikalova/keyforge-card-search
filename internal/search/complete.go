@@ -61,6 +61,11 @@ func (e *Engine) Completions() Completions {
 		switch {
 		case f.Name == "trait":
 			cf.Values, cf.List = traits, true
+		case f.Name == FieldArtist:
+			// A name has spaces, so the value is in quotes. The label is the
+			// name with its diacritics, and the bar matches the typed text
+			// against it folded: "fab" finds Fábio Perez.
+			cf.Values, cf.Labels = e.artistValues()
 		case f.Name == DirSort:
 			cf.Values, cf.List = sortKeys, true
 		case f.Name == "set" || f.Name == "first":
@@ -113,6 +118,7 @@ var fieldDocs = map[string]string{
 	"keyword":         "Keyword, with a number: keyword:assault>=2",
 	"ability":         "Ability trigger: play, fight, reap",
 	"trait":           "Trait",
+	FieldArtist:       "Artist, or none: artist:none",
 	query.NumberField: "Collector number",
 	"power":           "Power, or x",
 	"armor":           "Armor",
@@ -163,4 +169,31 @@ func valueLabel(field, v string) string {
 	}
 
 	return v
+}
+
+// artistValues returns the artist values for the search bar, quoted, and
+// their names. The first value is "none".
+func (e *Engine) artistValues() ([]string, map[string]string) {
+	var names []string
+
+	for _, en := range e.cards {
+		for _, a := range cardArtists(en.Card) {
+			names = appendNew(names, a)
+		}
+	}
+
+	slices.SortFunc(names, func(a, b string) int {
+		return strings.Compare(query.Fold(a), query.Fold(b))
+	})
+
+	values := []string{ArtistNone}
+	labels := map[string]string{ArtistNone: "No artist yet"}
+
+	for _, n := range names {
+		v := `"` + strings.ReplaceAll(n, `"`, "") + `"`
+		values = append(values, v)
+		labels[v] = n
+	}
+
+	return values, labels
 }
