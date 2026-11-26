@@ -180,7 +180,7 @@ func (e *Engine) matchFacet(t *query.Term, field, value string) bool {
 	}
 
 	switch {
-	case field == "keyword":
+	case field == "keyword" || field == "enhance":
 		return query.Normalize(t.Key) == query.Normalize(value)
 	case field == "set":
 		return e.setCode(t.Value.Text) == e.setCode(value)
@@ -256,7 +256,7 @@ func (e *Engine) facetRef(term string) (string, string, bool) {
 	}
 
 	switch {
-	case t.Field == "keyword":
+	case t.Field == "keyword" || t.Field == "enhance":
 		return t.Field, t.Key, true
 	case t.Field == "set":
 		return t.Field, e.setCode(t.Value.Text), true
@@ -315,7 +315,7 @@ func (f *Filters) Excluded() []FacetRef {
 // it.
 func (e *Engine) termValue(t *query.Term) (string, bool) {
 	switch {
-	case t.Field == "keyword":
+	case t.Field == "keyword" || t.Field == "enhance":
 		return t.Key, true
 	case t.Field == "set":
 		return e.setCode(t.Value.Text), true

@@ -63,7 +63,23 @@ func (e *Engine) HasTerm(terms []string, term string) bool {
 // Toggle returns the query without the facet filter of the term, if the
 // query has it at the top level in any spelling (Filters.State), or with the
 // term added at the end. A query with a parse error gets the term added.
+//
+// A negated term ("-h:dis") excludes the value: it removes an exclusion of
+// the value that the query has, or else replaces a filter on the value with
+// the exclusion.
 func (e *Engine) Toggle(src, term string) string {
+	if pos, ok := strings.CutPrefix(strings.TrimSpace(term), "-"); ok {
+		if field, value, ok := e.facetRef(pos); ok {
+			switch state, without := e.Filters(src).State(field, value); state {
+			case StateExcluded:
+				return without
+			case StateActive:
+				src = without
+			case StateNone:
+			}
+		}
+	}
+
 	if field, value, ok := e.facetRef(term); ok {
 		if state, without := e.Filters(src).State(field, value); state != StateNone {
 			return without
@@ -92,4 +108,24 @@ func (e *Engine) Card(id string) *card.Card {
 	}
 
 	return nil
+}
+
+// FieldTerm returns the query term that selects one value of a field, with
+// the value in quotes if it needs them: FieldTerm("trait", "elf") is
+// "trait:elf".
+func FieldTerm(field, value string) string {
+	return field + ":" + quote(value)
+}
+
+// TermState returns how the query uses the value of a one-term query such as
+// "h:dis" or "k:assault=2": as a filter, as an exclusion, or not at all.
+func (f *Filters) TermState(term string) FilterState {
+	field, value, ok := f.e.facetRef(term)
+	if !ok {
+		return StateNone
+	}
+
+	state, _ := f.State(field, value)
+
+	return state
 }

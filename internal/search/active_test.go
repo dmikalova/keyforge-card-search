@@ -91,3 +91,43 @@ func TestToggleRemovesAnySpelling(t *testing.T) {
 		}
 	}
 }
+
+func TestToggleExcludes(t *testing.T) {
+	e := engine(t)
+	cases := []struct{ q, term, want string }{
+		{"", "-h:dis", "-house:dis"},
+		{"house:dis type:creature", "-h:dis", "type:creature -house:dis"},
+		{"-house:dis type:creature", "-house:dis", "type:creature"},
+		{"k:assault>=2", "-keyword:assault=2", "-keyword:assault=2"},
+	}
+
+	for _, c := range cases {
+		if got := e.Toggle(c.q, c.term); got != c.want {
+			t.Errorf("Toggle(%q, %q) = %q, want %q", c.q, c.term, got, c.want)
+		}
+	}
+}
+
+func TestTermState(t *testing.T) {
+	e := engine(t)
+	f := e.Filters("h:dis -t:action k:assault en:aember=1 artist:fabio s:wc")
+	cases := []struct {
+		term string
+		want FilterState
+	}{
+		{"house:dis", StateActive},
+		{"type:action", StateExcluded},
+		{"type:creature", StateNone},
+		{"keyword:assault=3", StateActive},
+		{"enhance:aember=2", StateActive},
+		{`artist:"Fábio Perez"`, StateActive},
+		{"set:worldscollide", StateActive},
+		{"is:anomaly", StateNone},
+	}
+
+	for _, c := range cases {
+		if got := f.TermState(c.term); got != c.want {
+			t.Errorf("TermState(%q) = %v, want %v", c.term, got, c.want)
+		}
+	}
+}

@@ -248,19 +248,19 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 
 // CardView is the zoomed card: the image and every field of the card.
 type CardView struct {
-	ID        string
-	Title     string
-	House     string
-	HouseIcon Icon
-	Type      string
-	TypeIcon  Icon
-	Traits    string
+	ID    string
+	Title string
+	// House, Type, and the other values are filters: a click adds the
+	// value's term to the query (Field.Term).
+	House  Field
+	Type   Field
+	Traits []Field
 	// Stats are the power, armor, and aember lines that the card has.
 	Stats     []Field
-	Keywords  string
-	Abilities string
-	Enhance   string
-	Flags     string
+	Keywords  []Field
+	Abilities []Field
+	Enhance   []Field
+	Flags     []Field
 	// Rarities are the distinct rarities of the printings, oldest first.
 	Rarities []Field
 	// Text is the card text, one line in each element, with the trigger
@@ -274,11 +274,20 @@ type CardView struct {
 	Print int
 }
 
-// Field is one labeled value.
+// Field is one labeled value. In the card view, a click on a value with a
+// term toggles that term in the query, and State says how the query uses it.
 type Field struct {
 	Label, Value string
 	Icon         Icon
+	Term         string
+	State        search.FilterState
 }
+
+// Active reports whether the query filters on the value.
+func (f Field) Active() bool { return f.State == search.StateActive }
+
+// Excluded reports whether the query excludes the value.
+func (f Field) Excluded() bool { return f.State == search.StateExcluded }
 
 // PrintView is one printing in the card view.
 type PrintView struct {
@@ -289,8 +298,11 @@ type PrintView struct {
 	// Flavor is the flavor text, one line in each element, with the names
 	// of other cards as links. An attribution ("—Name") is its own line.
 	Flavor [][]TextPart
-	// Artist is the artist of the printing, with diacritics, or empty.
-	Artist string
+	// Artist is the artist of the printing as a filter, or an empty value.
+	Artist Field
+	// Set is the printing's set as a filter. The set chip switches the
+	// shown printing, and a funnel button next to it adds the term.
+	Set Field
 }
 
 // RelatedView is one thread of related cards in the card view.
@@ -323,30 +335,58 @@ func (v CardView) Current() PrintView {
 // and find gives the other cards of the mentions and the threads.
 func NewCardView(c *card.Card, shown int, setName func(string) string, find Lookup) CardView {
 	v := CardView{
-		ID:        c.ID,
-		Title:     c.Title,
-		House:     search.HouseLabel(search.HouseOf(c)),
-		HouseIcon: HouseIcon(c.House, search.HouseLabel(c.House)),
-		Type:      capitalize(c.Type),
-		TypeIcon:  TypeIcon(cardTypeKey(c), capitalize(c.Type)),
-		Traits:    strings.Join(mapStrings(c.Traits, capitalize), " • "),
-		Keywords:  keywordList(c.Keywords),
-		Abilities: strings.Join(mapStrings(c.Abilities, search.AbilityLabel), ", "),
-		Enhance:   countList(c.Enhance),
-		Flags:     strings.Join(c.Flags, ", "),
-		Print:     shown,
+		ID:    c.ID,
+		Title: c.Title,
+		House: Field{
+			Label: "House", Value: search.HouseLabel(search.HouseOf(c)),
+			Icon: HouseIcon(c.House, search.HouseLabel(c.House)),
+			Term: search.FieldTerm("house", search.HouseOf(c)),
+		},
+		Type: Field{
+			Label: "Type", Value: capitalize(c.Type),
+			Icon: TypeIcon(cardTypeKey(c), capitalize(c.Type)),
+			Term: search.FieldTerm("type", strings.ToLower(c.Type)),
+		},
+		Keywords: keywordFields(c.Keywords),
+		Enhance:  enhanceFields(c.Enhance),
+		Print:    shown,
+	}
+
+	for _, t := range c.Traits {
+		v.Traits = append(v.Traits, Field{Value: capitalize(t), Term: search.FieldTerm("trait", t)})
+	}
+
+	for _, a := range c.Abilities {
+		v.Abilities = append(v.Abilities, Field{
+			Value: search.AbilityLabel(a), Term: search.FieldTerm("ability", a),
+		})
+	}
+
+	for _, f := range c.Flags {
+		v.Flags = append(v.Flags, Field{Value: f, Term: "is:" + f})
 	}
 
 	if c.Power != nil {
+		power := "power=" + strconv.Itoa(c.Power.N)
+		if c.Power.X {
+			power = "power:x"
+		}
+
 		v.Stats = append(
 			v.Stats,
-			Field{"Power", c.Power.String(), StatIcon("Power")},
-			Field{"Armor", strconv.Itoa(c.Armor), StatIcon("Armor")},
+			Field{Label: "Power", Value: c.Power.String(), Icon: StatIcon("Power"), Term: power},
+			Field{
+				Label: "Armor", Value: strconv.Itoa(c.Armor), Icon: StatIcon("Armor"),
+				Term: "armor=" + strconv.Itoa(c.Armor),
+			},
 		)
 	}
 
 	if c.Aember > 0 {
-		v.Stats = append(v.Stats, Field{"Æmber", strconv.Itoa(c.Aember), StatIcon("Æmber")})
+		v.Stats = append(v.Stats, Field{
+			Label: "Æmber", Value: strconv.Itoa(c.Aember), Icon: StatIcon("Æmber"),
+			Term: "aember=" + strconv.Itoa(c.Aember),
+		})
 	}
 
 	for line := range strings.SplitSeq(c.Text, "\n") {
@@ -362,18 +402,25 @@ func NewCardView(c *card.Card, shown int, setName func(string) string, find Look
 			SetIcon: SetIcon(p.Set, setName(p.Set)),
 			Image:   catalog.ImageURL(p.Image),
 			Flavor:  flavorLines(p.Flavor, c),
-			Artist:  p.Artist,
+			Set: Field{
+				Value: setName(p.Set), Icon: SetIcon(p.Set, setName(p.Set)),
+				Term: search.FieldTerm("set", p.Set),
+			},
 		})
+
+		if p.Artist != "" {
+			v.Sets[i].Artist = Field{Value: p.Artist, Term: ArtistTerm(p.Artist)}
+		}
 
 		r := printRarity(p)
 		if !slices.ContainsFunc(
 			v.Rarities,
 			func(f Field) bool { return f.Value == rarityLabel(r) },
 		) {
-			v.Rarities = append(
-				v.Rarities,
-				Field{Label: "Rarity", Value: rarityLabel(r), Icon: RarityIcon(r)},
-			)
+			v.Rarities = append(v.Rarities, Field{
+				Label: "Rarity", Value: rarityLabel(r), Icon: RarityIcon(r),
+				Term: search.FieldTerm("rarity", strings.ToLower(p.Rarity)),
+			})
 		}
 	}
 
@@ -393,38 +440,61 @@ func NewCardView(c *card.Card, shown int, setName func(string) string, find Look
 	return v
 }
 
-func mapStrings(in []string, f func(string) string) []string {
-	out := make([]string, len(in))
-	for i, s := range in {
-		out[i] = f(s)
+// keywordFields returns the keywords as filters. A keyword with a number,
+// such as assault 3, selects that number: keyword:assault=3.
+func keywordFields(m map[string]int) []Field {
+	var out []Field
+
+	for _, k := range slices.Sorted(maps.Keys(m)) {
+		f := Field{Value: capitalize(strings.ReplaceAll(k, "-", " ")), Term: "keyword:" + k}
+		if m[k] > 0 {
+			f.Value += " " + strconv.Itoa(m[k])
+			f.Term += "=" + strconv.Itoa(m[k])
+		}
+
+		out = append(out, f)
 	}
 
 	return out
 }
 
-func keywordList(m map[string]int) string {
-	keys := slices.Sorted(maps.Keys(m))
-	parts := make([]string, len(keys))
+// enhanceFields returns the enhance icons as filters: enhance:aember=2.
+func enhanceFields(m map[string]int) []Field {
+	var out []Field
 
-	for i, k := range keys {
-		parts[i] = capitalize(strings.ReplaceAll(k, "-", " "))
-		if m[k] > 0 {
-			parts[i] += " " + strconv.Itoa(m[k])
+	for _, k := range slices.Sorted(maps.Keys(m)) {
+		out = append(out, Field{
+			Value: capitalize(k) + " ×" + strconv.Itoa(m[k]),
+			Term:  "enhance:" + k + "=" + strconv.Itoa(m[k]),
+		})
+	}
+
+	return out
+}
+
+// Mark sets the state of each value from the query's filters.
+func (v *CardView) Mark(f *search.Filters) {
+	mark := func(fs []Field) {
+		for i := range fs {
+			if fs[i].Term != "" {
+				fs[i].State = f.TermState(fs[i].Term)
+			}
 		}
 	}
 
-	return strings.Join(parts, ", ")
-}
+	v.House.State = f.TermState(v.House.Term)
+	v.Type.State = f.TermState(v.Type.Term)
 
-func countList(m map[string]int) string {
-	keys := slices.Sorted(maps.Keys(m))
-	parts := make([]string, len(keys))
-
-	for i, k := range keys {
-		parts[i] = capitalize(k) + " ×" + strconv.Itoa(m[k])
+	for _, fs := range [][]Field{v.Traits, v.Stats, v.Keywords, v.Abilities, v.Enhance, v.Flags, v.Rarities} {
+		mark(fs)
 	}
 
-	return strings.Join(parts, ", ")
+	for i := range v.Sets {
+		v.Sets[i].Set.State = f.TermState(v.Sets[i].Set.Term)
+		if v.Sets[i].Artist.Term != "" {
+			v.Sets[i].Artist.State = f.TermState(v.Sets[i].Artist.Term)
+		}
+	}
 }
 
 func capitalize(s string) string {
@@ -648,4 +718,20 @@ func commas(n int) string {
 // ArtistTerm returns the query term for an artist: artist:"Fábio Perez".
 func ArtistTerm(name string) string {
 	return search.FieldArtist + `:"` + strings.ReplaceAll(name, `"`, "") + `"`
+}
+
+// filterAction is the Datastar action of a card view filter button. The
+// script builds the URL: the term (negated for an Alt-click or a long
+// press), the open card, and its shown printing.
+const filterAction = "@get(window.kfsearch.filterURL(el, evt))"
+
+// filterTitle is the tooltip of a card view filter button.
+func filterTitle(f Field) string {
+	switch f.State {
+	case search.StateActive, search.StateExcluded:
+		return "Remove " + f.Term
+	case search.StateNone:
+	}
+
+	return "Add " + f.Term + " (Alt-click or long press to exclude)"
 }

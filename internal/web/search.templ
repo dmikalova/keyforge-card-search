@@ -157,23 +157,23 @@ templ Zoom(v CardView) {
 				</button>
 				<h2>{ v.Title }</h2>
 				<dl>
-					@iconRow("House", v.House, v.HouseIcon)
-					@iconRow("Type", v.Type, v.TypeIcon)
+					@filterRow("House", []Field{v.House})
+					@filterRow("Type", []Field{v.Type})
 					for i, r := range v.Rarities {
 						if i == 0 {
-							@iconRow(plural(len(v.Rarities), "Rarity", "Rarities"), r.Value, r.Icon)
+							@filterRow(plural(len(v.Rarities), "Rarity", "Rarities"), []Field{r})
 						} else {
-							@iconRow("", r.Value, r.Icon)
+							@filterRow("", []Field{r})
 						}
 					}
-					@dlRow("Traits", v.Traits)
+					@filterRow("Traits", v.Traits)
 					for _, f := range v.Stats {
-						@iconRow(f.Label, f.Value, f.Icon)
+						@filterRow(f.Label, []Field{f})
 					}
-					@dlRow("Keywords", v.Keywords)
-					@dlRow("Abilities", v.Abilities)
-					@dlRow("Enhance", v.Enhance)
-					@dlRow("Flags", v.Flags)
+					@filterRow("Keywords", v.Keywords)
+					@filterRow("Abilities", v.Abilities)
+					@filterRow("Enhance", v.Enhance)
+					@filterRow("Flags", v.Flags)
 				</dl>
 				if len(v.Text) > 0 {
 					<div class="zoom-text">
@@ -192,14 +192,27 @@ templ Zoom(v CardView) {
 								@icon(p.SetIcon)
 								<span>{ p.Label }</span>
 							</button>
+							<button
+								type="button"
+								class={ "set-filter", templ.KV("active", p.Set.Active()), templ.KV("excluded", p.Set.Excluded()) }
+								data-term={ p.Set.Term }
+								aria-pressed={ strconv.FormatBool(p.Set.State != 0) }
+								aria-label={ filterTitle(p.Set) }
+								title={ filterTitle(p.Set) }
+								data-on:click={ filterAction }
+							>
+								<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round">
+									<path d="M3 5h18l-7 8v6l-4 2v-8z"></path>
+								</svg>
+							</button>
 						</li>
 					}
 				</ul>
 				for _, p := range v.Sets {
-					if p.Artist != "" {
+					if p.Artist.Term != "" {
 						<p class="artist" data-print={ itoa(p.Index) } hidden?={ p.Index != v.Print }>
 							<span class="artist-label">Artist</span>
-							<a href={ templ.SafeURL(SearchURL(ArtistTerm(p.Artist))) }>{ p.Artist }</a>
+							@filterButton(p.Artist)
 						</p>
 					}
 				}
@@ -251,27 +264,38 @@ templ textParts(parts []TextPart) {
 	}
 }
 
-templ dlRow(label, value string) {
-	if value != "" {
+// filterRow is a card view row of values. Each value is a filter button.
+templ filterRow(label string, fs []Field) {
+	if len(fs) > 0 && fs[0].Value != "" {
 		<dt>{ label }</dt>
-		<dd>{ value }</dd>
+		<dd class="filters">
+			for _, f := range fs {
+				@filterButton(f)
+			}
+		</dd>
 	}
+}
+
+// filterButton is one value in the card view. A click toggles its term in
+// the query, and an Alt-click or a long press excludes it. The card view
+// stays open with the new marks; closing it shows the new results.
+templ filterButton(f Field) {
+	<button
+		type="button"
+		class={ "cv-filter", templ.KV("active", f.Active()), templ.KV("excluded", f.Excluded()) }
+		data-term={ f.Term }
+		aria-pressed={ strconv.FormatBool(f.State != 0) }
+		title={ filterTitle(f) }
+		data-on:click={ filterAction }
+	>
+		@icon(f.Icon)
+		{ f.Value }
+	</button>
 }
 
 // QueryError is the short error line under the search bar.
 templ QueryError(msg string) {
 	<p id="qerror" class="qerror" role="status">{ msg }</p>
-}
-
-// iconRow is a card view row with an icon before the value.
-templ iconRow(label, value string, i Icon) {
-	if value != "" {
-		<dt>{ label }</dt>
-		<dd>
-			@icon(i)
-			{ value }
-		</dd>
-	}
 }
 
 // icon shows an icon. An SVG icon is a mask in the text color. The icon is

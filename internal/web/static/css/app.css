@@ -835,8 +835,71 @@ html:has(.syntax-modal:not([hidden])) {
   color: var(--muted);
 }
 
-.artist a {
+/* A value in the card view is a filter button: it reads as text, and a
+   hover or a mark shows that a click filters on it. */
+.zoom dd.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.3rem;
+}
+
+.cv-filter {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.35rem;
+  margin: 0 -0.1rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background: none;
   color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.cv-filter:hover,
+.cv-filter:focus-visible {
+  border-color: var(--muted);
+}
+
+.cv-filter.active,
+.set-filter.active {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.cv-filter.excluded,
+.set-filter.excluded {
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.printings li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.set-filter {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  -webkit-touch-callout: none;
+}
+
+.set-filter:hover,
+.set-filter:focus-visible {
+  border-color: var(--muted);
+  color: var(--on-surface);
 }
 
 /* On a phone the facets are narrow columns, so a long label wraps instead

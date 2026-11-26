@@ -99,7 +99,7 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	// card=ID opens the card view of the card, so a link to a card and a
 	// reload with the card view open work.
 	if c := e.Card(r.URL.Query().Get("card")); c != nil {
-		cv := web.NewCardView(c, defaultPrint(c), s.setName, e.Card)
+		cv := s.markedCard(c, defaultPrint(c), q)
 		v.Card = &cv
 	}
 

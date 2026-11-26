@@ -110,6 +110,15 @@ func (s *Server) live(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A filter click in the card view (card=ID) keeps the view open with
+	// the new marks.
+	if c := e.Card(r.URL.Query().Get("card")); c != nil {
+		shown, _ := strconv.Atoi(r.URL.Query().Get("p"))
+		if !send("the card", sse.PatchElementTempl(web.Zoom(s.markedCard(c, shown, q)))) {
+			return
+		}
+	}
+
 	if !b.keep {
 		if !send("the signals", sse.PatchSignals([]byte(web.SignalsJSON(b.q)))) {
 			return
@@ -143,12 +152,13 @@ func (s *Server) cardView(w http.ResponseWriter, r *http.Request) {
 	var (
 		c     *card.Card
 		shown int
+		sig   barSignals
 	)
 
-	if r.URL.Query().Get("random") != "" {
-		var sig barSignals
-		_ = datastar.ReadSignals(r, &sig)
+	// The bar's query marks the values that it filters on.
+	_ = datastar.ReadSignals(r, &sig)
 
+	if r.URL.Query().Get("random") != "" {
 		res, err := e.Search(sig.Q)
 		if err != nil || len(res.Items) == 0 {
 			res, err = e.Search("")
@@ -178,18 +188,8 @@ func (s *Server) cardView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setName := func(slug string) string {
-		if set, ok := e.SetOf(slug); ok {
-			return set.Name
-		}
-
-		return slug
-	}
-
 	sse := datastar.NewSSE(w, r)
-	if err := sse.PatchElementTempl(
-		web.Zoom(web.NewCardView(c, shown, setName, e.Card)),
-	); err != nil {
+	if err := sse.PatchElementTempl(web.Zoom(s.markedCard(c, shown, sig.Q))); err != nil {
 		s.log.Warn("send the card", "error", err)
 
 		return
@@ -200,6 +200,16 @@ func (s *Server) cardView(w http.ResponseWriter, r *http.Request) {
 	); err != nil {
 		s.log.Warn("send the card script", "error", err)
 	}
+}
+
+// markedCard returns the card view of a card with the values that the query
+// filters on marked.
+func (s *Server) markedCard(c *card.Card, shown int, q string) web.CardView {
+	e := s.src.Engine()
+	cv := web.NewCardView(c, shown, s.setName, e.Card)
+	cv.Mark(e.Filters(q))
+
+	return cv
 }
 
 // jsString returns s as a JavaScript string literal.

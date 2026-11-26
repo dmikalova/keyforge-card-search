@@ -76,6 +76,35 @@
   // closes it or goes to the card before.
   let opener = null;
   let fromHistory = false;
+  // fromCard is set while a filter from the card view runs: it holds the
+  // card view's scroll place.
+  let fromCard = null;
+  // pressed is the card view filter button of a long press: its click
+  // excludes the value.
+  let pressed = null;
+  let pressTimer = 0;
+  const longPress = 500;
+
+  document.addEventListener("pointerdown", (e) => {
+    const b = e.target.closest?.("#zoom .cv-filter, #zoom .set-filter");
+    clearTimeout(pressTimer);
+    pressed = null;
+    if (!b || e.pointerType === "mouse") return;
+    pressTimer = setTimeout(() => {
+      pressed = b;
+    }, longPress);
+  });
+  for (const t of ["pointerup", "pointercancel", "pointermove"]) {
+    document.addEventListener(t, (e) => {
+      if (t !== "pointermove" || Math.abs(e.movementX) + Math.abs(e.movementY) > 4) {
+        clearTimeout(pressTimer);
+      }
+    });
+  }
+  // A long press opens no context menu on a filter button.
+  document.addEventListener("contextmenu", (e) => {
+    if (e.target.closest?.("#zoom .cv-filter, #zoom .set-filter")) e.preventDefault();
+  });
 
   const cardParam = () => new URLSearchParams(location.search).get("card");
 
@@ -166,17 +195,43 @@
       fromHistory = false;
       z.querySelector(".zoom-close")?.focus({ preventScroll: true });
     },
+    // filterURL returns the live search URL for a filter button in the card
+    // view: the button's term, negated for an Alt-click or a long press, and
+    // the open card with its shown printing, so the server sends the card
+    // view back with the new marks.
+    filterURL(el, evt) {
+      const z = zoom();
+      const exclude = evt.altKey || pressed === el;
+      pressed = null;
+      const term = (exclude ? "-" : "") + el.dataset.term;
+      const p = z?.querySelector(".printing.active")?.dataset.print || "0";
+      fromCard = { scroll: z?.querySelector(".zoom-card")?.scrollTop || 0 };
+      const u = new URLSearchParams({ op: "toggle", term, card: z?.dataset.card || "", p });
+      return "/results?" + u;
+    },
     // update puts a new query in the URL and the title. It drops the place
     // in the results (at=N) and closes the card view, because the results
-    // are new.
+    // are new. A filter from the card view keeps the card view open: the
+    // results under it are new, and closing it shows them.
     update({ url, title }) {
       const now = new URL(location.href);
       const next = new URL(url, location.href);
       if (now.searchParams.get("q") !== next.searchParams.get("q")) {
-        history.replaceState(null, "", next);
-        hideZoom();
         window.scrollTo(0, 0);
+        const z = zoom();
+        if (fromCard && z && !z.hidden) {
+          // The card entries behind this one have the old query, so the
+          // card view now closes in place (closeZoom without a card state).
+          next.searchParams.set("card", z.dataset.card);
+          history.replaceState(null, "", next);
+          const card = z.querySelector(".zoom-card");
+          if (card) card.scrollTop = fromCard.scroll;
+        } else {
+          history.replaceState(null, "", next);
+          hideZoom();
+        }
       }
+      fromCard = null;
       if (title) document.title = title;
     },
   };
