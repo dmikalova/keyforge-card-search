@@ -10,6 +10,12 @@ Run `mage ci:fix && mage ci:check` before you call work done. It must print
 `ALL GREEN`. The build step also fails if a `.templ` file changed without
 `mage templ`.
 
+Run `mage ui:check` before you push a change to a page, the CSS, or
+`search.js`. It starts the site with the fixture dataset and checks the page
+in headless Chrome at a desk width and a phone width. It needs Chrome, so it
+is not part of `ci:check`. Set `DATASET_URL` to check the live dataset. The
+screenshots go to `tmp/ui`.
+
 ## Package layout
 
 | Path               | Role                                                         |
@@ -18,8 +24,9 @@ Run `mage ci:fix && mage ci:check` before you call work done. It must print
 | `internal/catalog` | The dataset loader (`DATASET_URL`, ETag), and image URLs     |
 | `internal/fixture` | The hand-written dataset for local work and tests            |
 | `internal/search`  | The query fields, the default printing, the sort, the facets |
-| `internal/server`  | The routes: page, batch, random, syntax, JSON export         |
+| `internal/server`  | The routes: page, card page, batch, random, syntax, JSON     |
 | `internal/web`     | templ pages, view models, and the embedded static files      |
+| `uicheck`          | The browser checks of `mage ui:check` (its own Go module)    |
 
 ## Rules
 
