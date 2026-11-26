@@ -44,7 +44,7 @@ templ ResultsView(r Results) {
 						<p class="count"><strong>{ commas(r.Count) }</strong> { plural(r.Count, "card", "cards") }</p>
 						<label class="size">
 							Size
-							<input id="size" type="range" min="120" max="300" step="20" value="180" aria-label="Card size"/>
+							<input id="size" type="range" min={ itoa(SizeMin) } max={ itoa(SizeMax) } step={ itoa(SizeStep) } value={ itoa(SizeDefault) } aria-label="Card size"/>
 						</label>
 					</div>
 					<div class="facet-list">

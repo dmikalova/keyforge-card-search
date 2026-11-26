@@ -8,6 +8,7 @@ require (
 	github.com/a-h/templ v0.3.1118
 	github.com/dmikalova/keyforge-data v1.20.0
 	github.com/dmikalova/project-standards v1.37.0
+	github.com/dop251/goja v0.0.0-20261125210501-5e92a7e24d0c
 	github.com/magefile/mage v1.17.2
 	github.com/starfederation/datastar-go v1.2.2
 )
@@ -19,8 +20,11 @@ require (
 	github.com/andybalholm/brotli v1.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cli/browser v1.3.0 // indirect
+	github.com/dlclark/regexp2/v2 v2.11.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
+	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/klauspost/compress v1.20.5 // indirect
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect

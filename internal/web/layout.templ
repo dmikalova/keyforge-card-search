@@ -4,7 +4,7 @@ package web
 // page: the search bar then updates the results as the user types.
 templ page(title, description string, v PageView, live bool) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-size={ SizeData() } style={ TileStyle() }>
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -38,6 +38,7 @@ templ page(title, description string, v PageView, live bool) {
 			<link rel="icon" type="image/svg+xml" href={ Asset("img/favicon.svg") }/>
 			<link rel="preload" href="/static/font/TeutonFett-Regular.woff" as="font" type="font/woff" crossorigin/>
 			<link rel="stylesheet" href={ Asset("css/app.css") }/>
+			<script src={ Asset("js/text.js") } defer></script>
 			<script src={ Asset("js/search.js") } defer></script>
 			<script type="module" src={ Asset("js/datastar.js") }></script>
 		</head>

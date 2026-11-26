@@ -5,9 +5,11 @@
   "use strict";
 
   const sizeKey = "kfsearch.size";
-  const minSize = 120;
-  const maxSize = 300;
-  const step = 20;
+  // The desk range of the slider comes from the page (web.SizeData):
+  // "min,max,step,default".
+  const [minSize, maxSize, step, defaultSize] = document.documentElement.dataset.size
+    .split(",")
+    .map(Number);
 
   // On a narrow screen the slider sets the number of columns, from maxCols
   // at the left end to one card wide at the right end.
@@ -61,7 +63,7 @@
 
   // current returns the slider value of the saved size.
   const current = () =>
-    narrow.matches ? maxCols + 1 - (load(colsKey) || 2) : load(sizeKey) || 180;
+    narrow.matches ? maxCols + 1 - (load(colsKey) || 2) : load(sizeKey) || defaultSize;
   const grow = () => (narrow.matches ? 1 : step);
   narrow.addEventListener("change", () => setSize(current()));
 
@@ -255,9 +257,8 @@
     return acData;
   };
 
-  const fold = (s) =>
-    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/æ/g, "ae");
+  // The text folding is in text.js, which the tests check against Go.
+  const { fold, norm } = globalThis.kfText;
 
   const opRe = /(!=|<=|>=|=|:|<|>)/;
   const empty = { items: [], at: -1, start: 0, end: 0 };
@@ -313,8 +314,6 @@
       ]);
 
   // norm is a value without case and punctuation, as the query compares it.
-  const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-
   // wordAt returns the word around the caret: its start and end, and the
   // part before the caret. A word ends at a space or a parenthesis.
   const wordAt = (q) => {

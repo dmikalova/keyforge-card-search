@@ -13,7 +13,6 @@
   --muted: #bcafc6;
   --error: #ff8a80;
   --radius: 10px;
-  --tile: 180px;
   color-scheme: dark;
 }
 
@@ -300,8 +299,12 @@ main {
   border-radius: 4px;
 }
 
-.facet a:hover {
-  background: var(--card);
+/* A hover mark needs a mouse or a trackpad: a tap on a phone leaves the
+   hover state on, so the value would stay marked. */
+@media (hover: hover) {
+  .facet a:hover {
+    background: var(--card);
+  }
 }
 
 .facet .n {
@@ -859,9 +862,19 @@ html:has(.syntax-modal:not([hidden])) {
   user-select: none;
 }
 
-.cv-filter:hover,
 .cv-filter:focus-visible {
   border-color: var(--muted);
+}
+
+@media (hover: hover) {
+  .cv-filter:hover {
+    border-color: var(--muted);
+  }
+
+  .set-filter:hover {
+    border-color: var(--muted);
+    color: var(--on-surface);
+  }
 }
 
 .cv-filter.active,
@@ -896,7 +909,6 @@ html:has(.syntax-modal:not([hidden])) {
   -webkit-touch-callout: none;
 }
 
-.set-filter:hover,
 .set-filter:focus-visible {
   border-color: var(--muted);
   color: var(--on-surface);
