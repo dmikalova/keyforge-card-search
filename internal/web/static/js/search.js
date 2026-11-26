@@ -9,37 +9,61 @@
   const maxSize = 300;
   const step = 20;
 
-  const load = () => {
+  // On a narrow screen the slider sets the number of columns, from maxCols
+  // at the left end to one card wide at the right end.
+  const colsKey = "kfsearch.cols";
+  const maxCols = 7;
+  const narrow = window.matchMedia("(max-width: 720px)");
+
+  const load = (key) => {
     try {
-      return Number(localStorage.getItem(sizeKey)) || 0;
+      return Number(localStorage.getItem(key)) || 0;
     } catch {
       return 0;
     }
   };
 
-  const save = (n) => {
+  const save = (key, n) => {
     try {
-      localStorage.setItem(sizeKey, String(n));
+      localStorage.setItem(key, String(n));
     } catch {
       // Storage can be off. The size then lasts for this page only.
     }
   };
 
-  const setSize = (n) => {
-    const size = Math.min(maxSize, Math.max(minSize, n));
-    document.documentElement.style.setProperty("--tile", `${size}px`);
-    const input = document.getElementById("size");
-    if (input) {
-      input.value = String(size);
-      // The filled part of the track, for the browsers without a progress
-      // pseudo-element.
-      const pct = ((size - minSize) / (maxSize - minSize)) * 100;
-      input.style.setProperty("--fill", `${pct}%`);
-    }
-    save(size);
+  // range sets the slider bounds and value, and the filled part of the
+  // track, for the browsers without a progress pseudo-element.
+  const range = (input, min, max, stepBy, value) => {
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(stepBy);
+    input.value = String(value);
+    input.style.setProperty("--fill", `${((value - min) / (max - min)) * 100}%`);
   };
 
-  const current = () => load() || 180;
+  // setSize takes a slider value: the tile width in pixels, or on a narrow
+  // screen maxCols + 1 - the number of columns.
+  const setSize = (n) => {
+    const input = document.getElementById("size");
+    if (narrow.matches) {
+      const v = Math.min(maxCols, Math.max(1, n));
+      const cols = maxCols + 1 - v;
+      document.documentElement.style.setProperty("--cols", String(cols));
+      if (input) range(input, 1, maxCols, 1, v);
+      save(colsKey, cols);
+      return;
+    }
+    const size = Math.min(maxSize, Math.max(minSize, n));
+    document.documentElement.style.setProperty("--tile", `${size}px`);
+    if (input) range(input, minSize, maxSize, step, size);
+    save(sizeKey, size);
+  };
+
+  // current returns the slider value of the saved size.
+  const current = () =>
+    narrow.matches ? maxCols + 1 - (load(colsKey) || 2) : load(sizeKey) || 180;
+  const grow = () => (narrow.matches ? 1 : step);
+  narrow.addEventListener("change", () => setSize(current()));
 
   const $ = (id) => document.getElementById(id);
   const zoom = () => $("zoom");
@@ -391,9 +415,9 @@
       $("random")?.click();
     },
     "?": () => openSyntax(),
-    "+": () => setSize(current() + step),
-    "=": () => setSize(current() + step),
-    "-": () => setSize(current() - step),
+    "+": () => setSize(current() + grow()),
+    "=": () => setSize(current() + grow()),
+    "-": () => setSize(current() - grow()),
   };
 
   // The search bar's keys run in the capture phase, before Datastar's

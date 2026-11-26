@@ -604,6 +604,11 @@ main {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* The size slider sets the number of columns (search.js). */
+  .grid {
+    grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  }
+
   .query {
     flex-basis: 100%;
     order: 3;

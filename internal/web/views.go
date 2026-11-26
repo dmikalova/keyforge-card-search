@@ -469,7 +469,7 @@ var syntaxFields = []syntaxField{
 	{
 		"artist", "art", "art:fabio",
 		"The artist of a printing. Accents do not matter: art:fabio finds Fábio Perez. " +
-			"artist:none gives the printings without an artist. Some sets have no artists yet.",
+			"artist:none gives the printings without an artist.",
 	},
 }
 
