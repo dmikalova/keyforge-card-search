@@ -50,6 +50,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /random", s.random)
 	mux.HandleFunc("GET /results", s.live)
 	mux.HandleFunc("GET /card", s.cardView)
+	mux.HandleFunc("GET /card/{id}", s.cardPage)
 	mux.HandleFunc("GET /syntax", func(w http.ResponseWriter, r *http.Request) {
 		s.render(w, r, web.SyntaxPage())
 	})
@@ -84,8 +85,30 @@ func queryOf(r *http.Request) string {
 	return q
 }
 
-// page renders the search page with the first batch.
+// page renders the search page with the first batch. card=ID opens the card
+// view of the card, so a link to a card and a reload with the card view open
+// work.
 func (s *Server) page(w http.ResponseWriter, r *http.Request) {
+	s.searchPage(w, r, s.src.Engine().Card(r.URL.Query().Get("card")))
+}
+
+// cardPage renders the page of one card (/card/ID): the search page with the
+// card view open, and a link preview of the card. The script moves the URL
+// to /?card=ID, which has the same preview.
+func (s *Server) cardPage(w http.ResponseWriter, r *http.Request) {
+	c := s.src.Engine().Card(r.PathValue("id"))
+	if c == nil {
+		http.NotFound(w, r)
+
+		return
+	}
+
+	s.searchPage(w, r, c)
+}
+
+// searchPage renders the search page, with the card view of c open if c is
+// not nil.
+func (s *Server) searchPage(w http.ResponseWriter, r *http.Request, c *card.Card) {
 	q := queryOf(r)
 
 	e := s.src.Engine()
@@ -96,11 +119,11 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 		Complete: web.CompleteJSON(e.Completions()),
 	}
 
-	// card=ID opens the card view of the card, so a link to a card and a
-	// reload with the card view open work.
-	if c := e.Card(r.URL.Query().Get("card")); c != nil {
+	if c != nil {
 		cv := s.markedCard(c, defaultPrint(c), q)
+		meta := web.CardMeta(cv, c)
 		v.Card = &cv
+		v.Meta = &meta
 	}
 
 	at, _ := strconv.Atoi(r.URL.Query().Get("at"))

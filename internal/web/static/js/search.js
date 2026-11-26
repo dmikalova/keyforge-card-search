@@ -733,6 +733,15 @@
     setTop();
     // A page that opens with a card (?card=ID) gets a results entry under
     // the card entry, so that closing the card view goes to the results.
+    // A card page (/card/ID) becomes the search URL with card=ID, which
+    // has the same link preview, so closing the card view and the history
+    // work as on the search page.
+    if (location.pathname.startsWith("/card/")) {
+      const url = new URL("/", location.href);
+      url.search = location.search;
+      url.searchParams.set("card", decodeURIComponent(location.pathname.slice(6)));
+      history.replaceState(null, "", url);
+    }
     const z0 = zoom();
     const id0 = cardParam();
     if (id0 && z0 && !z0.hidden && !(history.state && history.state.kfcard)) {

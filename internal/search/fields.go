@@ -322,3 +322,7 @@ func searchText(s string) string {
 
 	return textTokens.Replace(s)
 }
+
+// PlainText returns card text with the icon tokens as words, for text that
+// has no icons, such as a link preview: "{tide}" becomes "tide".
+func PlainText(s string) string { return searchText(s) }

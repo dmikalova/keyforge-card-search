@@ -96,6 +96,8 @@ type PageView struct {
 	// Card is the card view that the page opens, from the URL (card=ID),
 	// or nil.
 	Card *CardView
+	// Meta is the link preview of the page, or nil for the default one.
+	Meta *PageMeta
 }
 
 // Signals returns the Datastar signals of the page: the query text.
@@ -734,4 +736,50 @@ func filterTitle(f Field) string {
 	}
 
 	return "Add " + f.Term + " (Alt-click or long press to exclude)"
+}
+
+// PageMeta is the link preview of a page: the OpenGraph and Twitter tags.
+type PageMeta struct {
+	Title, Description string
+	// Image is the absolute URL of the preview image, or empty.
+	Image string
+	// Path is the page's path, for og:url.
+	Path string
+}
+
+// CardMeta returns the link preview of a card: the name, the card image of
+// the shown printing, and readable text: house, type, and stats, then the
+// card text, then the flavor text.
+func CardMeta(v CardView, c *card.Card) PageMeta {
+	head := []string{v.House.Value, v.Type.Value}
+	for _, f := range v.Stats {
+		head = append(head, f.Label+" "+f.Value)
+	}
+
+	lines := []string{strings.Join(head, " · ")}
+
+	for line := range strings.SplitSeq(search.PlainText(c.Text), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			lines = append(lines, line)
+		}
+	}
+
+	if v.Print >= 0 && v.Print < len(c.Printings) {
+		if f := strings.TrimSpace(c.Printings[v.Print].Flavor); f != "" {
+			lines = append(lines, f)
+		}
+	}
+
+	return PageMeta{
+		Title:       c.Title,
+		Description: strings.Join(lines, "\n"),
+		Image:       v.Current().Image,
+		Path:        CardPageURL(c.ID),
+	}
+}
+
+// CardPageURL returns the path of a card's own page, the link to share: a
+// link preview shows the card.
+func CardPageURL(id string) string {
+	return "/card/" + url.PathEscape(id)
 }
