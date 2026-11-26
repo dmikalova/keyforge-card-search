@@ -20,7 +20,7 @@ templ page(title, description string, v PageView, live bool) {
 					<meta property="og:image:height" content="420"/>
 					<meta property="og:image:alt" content={ v.Meta.Title }/>
 				}
-				<meta name="twitter:card" content="summary"/>
+				<meta name="twitter:card" content="summary_large_image"/>
 				<meta name="twitter:title" content={ v.Meta.Title }/>
 				<meta name="twitter:description" content={ v.Meta.Description }/>
 				if v.Meta.Image != "" {

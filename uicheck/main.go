@@ -373,7 +373,13 @@ func (c *checker) cardPage() {
 	}
 	// A printing with an image gives the preview image.
 	if strings.Contains(html, `id="zoom-img"`) {
-		tags = append(tags, `property="og:image" content="http`)
+		tags = append(tags,
+			`property="og:image" content="http`,
+			`property="og:image:width" content="300"`,
+			`property="og:image:height" content="420"`,
+			`property="og:image:alt" content="Troll"`,
+			`name="twitter:card" content="summary_large_image"`,
+		)
 	}
 
 	for _, tag := range tags {
