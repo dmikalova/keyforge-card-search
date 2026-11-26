@@ -32,13 +32,10 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
   and the rarity facet only.
 - [x] Page layout with the keyforge.cards purple and orange theme.
 - [x] The query box. Show parse errors at the token.
-- [x] Autocomplete after `field:` and for field names, in the browser.
-- [x] The caret can go between two chips (arrow keys or a click), to add a
-  term such as OR there. Cmd+A or Ctrl+A selects the whole query as text.
-  A paste makes chips.
-- [x] The search bar with chips: one chip for each top-level term. The results
-  change as the user types. Enter makes the draft into chips. A chip click
-  edits the chip, and its × removes it. The builder dropdown is gone.
+- [x] The search bar is one text input. The results change as the user types.
+  A focus or a click opens the completion list with every field and its
+  description. After `field:` the list shows the values. The list completes
+  the word at the caret, also in the middle of the query. The chips are gone.
 - [x] The facet values toggle their terms, with spread bars for each facet.
 - [x] Keyword, ability (`ab:`), and trait facets.
 - [x] The card view shows every field of the card, the sets, the related
@@ -47,8 +44,7 @@ keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 - [x] The header stays on the screen, and the card view opens below it.
 - [x] `sort:` takes a comma list of keys, with `-` for a descending key.
 - [x] The house facet groups the cards without a house (`group:`).
-- [x] House, type, rarity, and set icons in the facets, the chips, and the
-  card view. The site serves the icons at /icons/ from the public bucket.
+- [x] House, type, rarity, and set icons in the facets and the card view. The site serves the icons at /icons/ from the public bucket.
 - [ ] Minimum and maximum for power, armor, and aember. Sort and order
   controls in the page.
 - [x] The grid with batches, the sentinel, and lazy images (ADR 0002).

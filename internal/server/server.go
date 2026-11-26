@@ -84,21 +84,10 @@ func queryOf(r *http.Request) string {
 func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	q := queryOf(r)
 
-	// The query form sends the chips as q, the draft as d, and fz=1. Join
-	// them, so the URL holds the whole query.
-	if r.URL.Query().Get("fz") == "1" {
-		if d := strings.TrimSpace(r.URL.Query().Get("d")); d != "" {
-			q = search.AddTerm(q, d)
-		}
-
-		http.Redirect(w, r, web.SearchURL(q), http.StatusSeeOther)
-
-		return
-	}
-
 	e := s.src.Engine()
 	v := web.PageView{
-		Query:    q,
+		// The bar shows the query in canonical form.
+		Query:    canonical(e, q),
 		Missing:  s.src.Missing(),
 		Complete: web.CompleteJSON(e.Completions()),
 	}
@@ -108,12 +97,6 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	if c := e.Card(r.URL.Query().Get("card")); c != nil {
 		cv := web.NewCardView(c, defaultPrint(c), s.setCode, e.Card)
 		v.Card = &cv
-	}
-
-	if chips, err := e.Chips(q); err == nil {
-		v.Chips = web.NewChips(chips)
-	} else {
-		v.Draft = q
 	}
 
 	at, _ := strconv.Atoi(r.URL.Query().Get("at"))

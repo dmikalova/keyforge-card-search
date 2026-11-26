@@ -147,6 +147,13 @@ func TestCompletions(t *testing.T) {
 	if tr := find("trait"); len(tr.Values) == 0 {
 		t.Errorf("trait = %+v", tr)
 	}
+
+	// The search bar lists every field with its description.
+	for _, f := range c.Fields {
+		if f.Desc == "" {
+			t.Errorf("field %q has no description", f.Name)
+		}
+	}
 }
 
 // TestSetFacetMatchesSetTerm checks that each set facet count is the number

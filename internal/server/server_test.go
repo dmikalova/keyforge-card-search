@@ -48,9 +48,8 @@ func TestPageShowsResultsAndFacets(t *testing.T) {
 	body := w.Body.String()
 
 	for _, want := range []string{
-		`<button type="button" class="chip-text" title="Edit"`,
-		`value="house:brobnar"`,
-		`data-signals="{&#34;draft&#34;:&#34;&#34;,&#34;pos&#34;:-1,&#34;q&#34;:&#34;house:brobnar&#34;}"`,
+		`id="q" name="q" type="search" value="house:brobnar"`,
+		`data-signals="{&#34;q&#34;:&#34;house:brobnar&#34;}"`,
 		`class="tile"`,
 		`ageofascension/001.webp`,
 		`<h2>House</h2>`,
@@ -161,19 +160,16 @@ func TestSyntaxAndHealth(t *testing.T) {
 	}
 }
 
-func TestFormJoinsTheChipsAndTheDraft(t *testing.T) {
-	w := get(
-		t,
-		handler(t),
-		"/?q="+url.QueryEscape("n:troll")+"&d="+url.QueryEscape("h:brobnar")+"&fz=1",
-	)
-	if loc := w.Header().Get("Location"); loc != "/?q="+url.QueryEscape("n:troll h:brobnar") {
-		t.Errorf("Location = %s", loc)
+func TestSearchBarIsPlainText(t *testing.T) {
+	body := get(t, handler(t), "/?q="+url.QueryEscape("n:troll h:brobnar")).Body.String()
+	if !strings.Contains(body, `value="name:troll house:brobnar"`) {
+		t.Error("the search bar does not hold the query text")
 	}
 
-	body := get(t, handler(t), "/?q="+url.QueryEscape("n:troll")).Body.String()
-	if strings.Contains(body, `id="fuzzy"`) {
-		t.Error("the page still has the Fuzzy box")
+	for _, gone := range []string{`id="fuzzy"`, `id="chips"`, `class="chip`, `name="d"`} {
+		if strings.Contains(body, gone) {
+			t.Errorf("the page still has %s", gone)
+		}
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestChips(t *testing.T) {
+func TestTerms(t *testing.T) {
 	e := engine(t)
 	cases := []struct {
 		q    string
@@ -21,16 +21,16 @@ func TestChips(t *testing.T) {
 		{"s:aoa,wc", []string{"set:AoA,WC"}},
 	}
 	for _, c := range cases {
-		got, err := e.Chips(c.q)
+		got, err := e.Terms(c.q)
 		if err != nil {
-			t.Fatalf("Chips(%q): %v", c.q, err)
+			t.Fatalf("Terms(%q): %v", c.q, err)
 		}
 		if !slices.Equal(got, c.want) {
-			t.Errorf("Chips(%q) = %q, want %q", c.q, got, c.want)
+			t.Errorf("Terms(%q) = %q, want %q", c.q, got, c.want)
 		}
 	}
-	if _, err := e.Chips("h:"); err == nil {
-		t.Error("Chips of a bad query has no error")
+	if _, err := e.Terms("h:"); err == nil {
+		t.Error("Terms of a bad query has no error")
 	}
 }
 
@@ -48,9 +48,9 @@ func TestToggle(t *testing.T) {
 			t.Errorf("Toggle(%q, %q) = %q, want %q", c.q, c.term, got, c.want)
 		}
 	}
-	chips, _ := e.Chips("h:dis k:elusive")
-	if !e.HasChip(chips, "k:elusive") || e.HasChip(chips, "k:taunt") {
-		t.Errorf("HasChip on %q", chips)
+	terms, _ := e.Terms("h:dis k:elusive")
+	if !e.HasTerm(terms, "k:elusive") || e.HasTerm(terms, "k:taunt") {
+		t.Errorf("HasTerm on %q", terms)
 	}
 }
 

@@ -85,7 +85,7 @@ func SyntaxPage() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</tbody></table><h2>The search bar</h2><p>The results change as you type. Press Enter to make the typed terms into chips. Click a chip to edit it, or its × to remove it. A click on a value in the side panel adds its term, and a second click removes it.</p><h2>Fields</h2><table><thead><tr><th>Field</th><th>Alias</th><th>Example</th><th>Notes</th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</tbody></table><h2>The search bar</h2><p>The results change as you type. Click the search bar to see every field. After <code>field:</code>, the list shows the values of the field. The list completes the word at the caret, also in the middle of the query. Use the arrow keys to choose, Tab or Enter to take a suggestion, and Esc to close the list. Enter without a chosen suggestion runs the query. A click on a value in the side panel adds its term, and a second click removes it.</p><h2>Fields</h2><table><thead><tr><th>Field</th><th>Alias</th><th>Example</th><th>Notes</th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -39,12 +39,6 @@
   const zoom = () => $("zoom");
   const input = () => $("q");
 
-  // setSignals sets the search bar signals ($pos, $q). The query input
-  // takes the kfset event and sets them in Datastar.
-  const setSignals = (detail) => {
-    window.dispatchEvent(new CustomEvent("kfset", { detail }));
-  };
-
   // ---- The card view -------------------------------------------------
 
   // The URL holds the open card (card=ID), so a reload and the back button
@@ -141,99 +135,14 @@
         window.scrollTo(0, 0);
       }
       if (title) document.title = title;
-      placeInput();
     },
-    // placeCaret puts the draft input in the gap between the chips that is
-    // nearest to a click on the bar.
-    placeCaret(evt) {
-      const chips = Array.from(document.querySelectorAll("#chips .chip"));
-      let pos = -1;
-      for (const [i, c] of chips.entries()) {
-        const r = c.getBoundingClientRect();
-        const before = evt.clientY < r.top ||
-          (evt.clientY <= r.bottom && evt.clientX < r.left + r.width / 2);
-        if (before) {
-          pos = i;
-          break;
-        }
-      }
-      setPos(pos);
-      input()?.focus();
-    },
-    // pasted makes the pasted text into chips: it sends the bar, as Enter
-    // does.
-    pasted() {
-      const q = input();
-      if (!q || q.value.trim() === "") return;
-      closeAC();
-      $("bar")?.requestSubmit();
-    },
-  };
-
-  // ---- The search bar --------------------------------------------------
-
-  const chipCount = () => document.querySelectorAll("#chips .chip").length;
-
-  const getPos = () => {
-    const n = Number(input()?.dataset.pos ?? -1);
-    return Number.isFinite(n) ? n : -1;
-  };
-
-  // setPos moves the draft input before the chip at pos (-1: the end).
-  const setPos = (pos) => {
-    const n = chipCount();
-    const p = pos < 0 || pos >= n ? -1 : pos;
-    setSignals({ pos: p });
-    placeInput(p);
-  };
-
-  // placeInput sets the flex order of the input from $pos. Datastar does it
-  // too; this covers the time before Datastar starts.
-  const placeInput = (pos) => {
-    const q = input();
-    if (!q) return;
-    const p = pos ?? getPos();
-    q.style.order = p < 0 ? "100000" : String(2 * p - 1);
-  };
-
-  // selectAll moves the whole query into the input as text and selects it,
-  // so the user can copy it. Enter makes it into chips again.
-  const selectAll = () => {
-    const q = input();
-    const chips = Array.from(document.querySelectorAll("#chips .chip"))
-      .map((c) => c.dataset.term);
-    const p = getPos();
-    const draft = q.value.trim();
-    if (draft) chips.splice(p < 0 ? chips.length : p, 0, draft);
-    const all = chips.join(" ");
-    setSignals({ q: "", pos: -1 });
-    q.value = all;
-    q.dispatchEvent(new Event("input", { bubbles: true }));
-    placeInput();
-    q.select();
-  };
-
-  // caretKeys move the draft input across the chips with the arrow keys
-  // when the caret is at the start or the end of the input.
-  const caretKeys = (e) => {
-    const q = input();
-    if (e.target !== q) return false;
-    const n = chipCount();
-    const p = getPos() < 0 ? n : getPos();
-    const atStart = q.selectionStart === 0 && q.selectionEnd === 0;
-    const atEnd = q.selectionStart === q.value.length;
-    if (e.key === "ArrowLeft" && atStart && p > 0 && q.value === "") {
-      setPos(p - 1);
-      return true;
-    }
-    if (e.key === "ArrowRight" && atEnd && p < n && q.value === "") {
-      setPos(p + 1);
-      return true;
-    }
-    return false;
   };
 
   // ---- Autocomplete ----------------------------------------------------
+
+  // The search bar completes the word at the caret. A focus or a click
+  // opens the list: with no word at the caret, it shows every field with a
+  // short description. After "field:" it shows the values of the field.
 
   let acData = null;
   const acFields = () => {
@@ -247,11 +156,12 @@
   };
 
   const fold = (s) =>
-    s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/æ/g, "ae");
 
   const opRe = /(!=|<=|>=|=|:|<|>)/;
-  let ac = { items: [], at: -1, start: 0, end: 0, field: false };
+  const empty = { items: [], at: -1, start: 0, end: 0 };
+  let ac = empty;
 
   const closeAC = () => {
     const ul = $("ac");
@@ -259,61 +169,82 @@
       ul.hidden = true;
       ul.replaceChildren();
     }
-    ac = { items: [], at: -1, start: 0, end: 0, field: false };
+    input()?.setAttribute("aria-expanded", "false");
+    ac = empty;
   };
 
-  // suggest finds the completions of the word at the caret.
+  // label is the text of a field in the list: "house:" or "is:".
+  const label = (f) => `${f.name}:`;
+
+  // fieldItems are the fields whose name or alias starts with the prefix.
+  const fieldItems = (p) =>
+    acFields()
+      .filter((f) => !p || f.name.startsWith(p) || (f.alias && f.alias.startsWith(p)))
+      .map((f) => ({
+        text: label(f),
+        insert: label(f),
+        note: f.alias ? `${f.alias}: · ${f.desc || ""}` : f.desc || "",
+        field: true,
+      }));
+
+  // opItems are the operators that can follow a term.
+  const opItems = (p) =>
+    [
+      { text: "or", insert: "or ", note: "Either side matches" },
+      { text: "not", insert: "not ", note: "The next term does not match" },
+      { text: "(", insert: "(", note: "Start a group" },
+    ].filter((o) => !p || o.text.startsWith(p));
+
+  // wordAt returns the word around the caret: its start and end, and the
+  // part before the caret. A word ends at a space or a parenthesis.
+  const wordAt = (q) => {
+    const caret = q.selectionStart ?? q.value.length;
+    const before = q.value.slice(0, caret);
+    const after = q.value.slice(caret);
+    const start = caret - (before.match(/[^\s()]*$/)?.[0].length ?? 0);
+    const end = caret + (after.match(/^[^\s()]*/)?.[0].length ?? 0);
+    return { start, end, word: q.value.slice(start, caret), caret };
+  };
+
+  // suggest fills the list for the word at the caret.
   const suggest = () => {
     const q = input();
     if (!q || document.activeElement !== q) return closeAC();
-    const caret = q.selectionStart ?? q.value.length;
-    const before = q.value.slice(0, caret);
-    const m = before.match(/(^|[\s(])(-?)([^\s()]*)$/);
-    if (!m) return closeAC();
-    const word = m[3];
-    const wordStart = caret - word.length;
-    const fields = acFields();
+    const { start, end, word } = wordAt(q);
+    const neg = word.startsWith("-") ? 1 : 0;
+    const w = word.slice(neg);
     let items = [];
-    let start = wordStart;
-    let field = false;
-    const op = word.match(opRe);
+    let from = start + neg;
+    const op = w.match(opRe);
     if (op) {
-      const name = word.slice(0, op.index).toLowerCase();
-      const f = fields.find((x) => x.name === name || x.alias === name);
+      const name = w.slice(0, op.index).toLowerCase();
+      const f = acFields().find((x) => x.name === name || x.alias === name);
       if (!f || !f.values) return closeAC();
-      let valueStart = op.index + op[0].length;
+      let vs = op.index + op[0].length;
       if (f.list) {
-        const comma = word.lastIndexOf(",");
-        if (comma >= valueStart) valueStart = comma + 1;
+        const comma = w.lastIndexOf(",");
+        if (comma >= vs) vs = comma + 1;
       }
-      let prefix = word.slice(valueStart);
-      if (prefix.startsWith("-") && f.name === "sort") {
-        prefix = prefix.slice(1);
-        valueStart++;
-      }
-      const p = fold(prefix);
+      if (f.name === "sort" && w[vs] === "-") vs++;
+      const p = fold(w.slice(vs));
       const starts = f.values.filter((v) => fold(v).startsWith(p));
       const has = f.values.filter((v) => !fold(v).startsWith(p) && fold(v).includes(p));
-      items = starts.concat(has).filter((v) => fold(v) !== p);
-      start = wordStart + valueStart;
+      items = starts.concat(has).filter((v) => fold(v) !== p)
+        .map((v) => ({ text: v, insert: v, note: "" }));
+      from = start + neg + vs;
     } else {
-      if (word.length === 0) return closeAC();
-      const p = word.toLowerCase();
-      // The operator words are not the start of a field name.
-      if (["or", "and", "not"].includes(p)) return closeAC();
-      for (const f of fields) {
-        const label = f.name === "is" ? "is:" : `${f.name}:`;
-        if (f.name.startsWith(p) || (f.alias && f.alias.startsWith(p) && f.alias !== p)) {
-          items.push(label);
-        }
-      }
-      field = true;
+      const p = w.toLowerCase();
+      const before = q.value.slice(0, start).trim();
+      // After a term, the operators come first. At the start of the query
+      // or after "(", "or", or "not", only the fields make sense.
+      const afterTerm = before !== "" && !/(^|\s)(or|and|not)$|\($/i.test(before);
+      items = fieldItems(p);
+      if (afterTerm && !neg) items = opItems(p).concat(items);
     }
-    items = items.slice(0, 8);
     if (items.length === 0) return closeAC();
     // No item is chosen at first, so Enter still runs the query. Tab takes
     // the first item, and the arrow keys choose one.
-    ac = { items, at: -1, start, end: caret, field };
+    ac = { items, at: -1, start: from, end };
     render();
   };
 
@@ -321,32 +252,49 @@
     const ul = $("ac");
     if (!ul) return;
     ul.replaceChildren(
-      ...ac.items.map((v, i) => {
+      ...ac.items.map((it, i) => {
         const li = document.createElement("li");
         li.role = "option";
-        li.textContent = v;
+        li.id = `ac-${i}`;
         li.dataset.i = String(i);
         li.setAttribute("aria-selected", String(i === ac.at));
+        const t = document.createElement("span");
+        t.className = "ac-text";
+        t.textContent = it.text;
+        li.append(t);
+        if (it.note) {
+          const n = document.createElement("span");
+          n.className = "ac-note";
+          n.textContent = it.note;
+          li.append(n);
+        }
         return li;
       }),
     );
-    const q = input();
-    ul.style.order = q.style.order;
     ul.hidden = false;
+    const q = input();
+    q?.setAttribute("aria-expanded", "true");
+    if (ac.at >= 0) {
+      q?.setAttribute("aria-activedescendant", `ac-${ac.at}`);
+      ul.children[ac.at]?.scrollIntoView({ block: "nearest" });
+    } else {
+      q?.removeAttribute("aria-activedescendant");
+    }
   };
 
-  // accept puts the chosen completion in the input.
+  // accept puts the chosen completion in place of the word at the caret.
   const accept = (i) => {
     const q = input();
-    const v = ac.items[i];
-    if (!q || v == null) return;
-    const field = ac.field;
-    q.value = q.value.slice(0, ac.start) + v + q.value.slice(ac.end);
-    const caret = ac.start + v.length;
+    const it = ac.items[i];
+    if (!q || it == null) return;
+    q.value = q.value.slice(0, ac.start) + it.insert + q.value.slice(ac.end);
+    const caret = ac.start + it.insert.length;
     q.setSelectionRange(caret, caret);
     closeAC();
     q.dispatchEvent(new Event("input", { bubbles: true }));
-    if (field) suggest();
+    // A field or an operator needs more text after it, so the list stays
+    // open with the next suggestions.
+    if (it.field || it.insert.endsWith(" ") || it.insert === "(") suggest();
   };
 
   // ---- Keys and clicks -------------------------------------------------
@@ -402,12 +350,9 @@
       e.preventDefault();
       e.stopImmediatePropagation();
     };
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
-      stop();
-      closeAC();
-      selectAll();
-      return;
-    }
+    // A search input clears its text on Escape. Esc here only closes the
+    // list, or leaves the bar, so the query stays.
+    if (e.key === "Escape") e.preventDefault();
     const open = !$("ac")?.hidden && ac.items.length > 0;
     if (open) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -429,8 +374,11 @@
         closeAC();
         return;
       }
+    } else if (e.key === "ArrowDown") {
+      // ArrowDown opens a closed list.
+      stop();
+      suggest();
     }
-    if (caretKeys(e)) stop();
   }, true);
 
   document.addEventListener("keydown", (e) => {
@@ -492,6 +440,24 @@
   document.addEventListener("input", (e) => {
     if (e.target.id === "size") setSize(Number(e.target.value));
     if (e.target.id === "q") suggest();
+  });
+
+  // A focus, a click, or a caret move in the bar opens the list for the
+  // word at the caret.
+  document.addEventListener("focusin", (e) => {
+    if (e.target.id === "q") suggest();
+  });
+  document.addEventListener("mouseup", (e) => {
+    if (e.target.id === "q") suggest();
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.target.id === "q" && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+      suggest();
+    }
+  });
+  // A press on the list keeps the focus in the bar.
+  document.addEventListener("mousedown", (e) => {
+    if (e.target.closest("#ac")) e.preventDefault();
   });
 
   document.addEventListener("focusout", (e) => {
@@ -578,7 +544,6 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     setTop();
-    placeInput();
     const n = load();
     if (n) setSize(n);
     restorePlace();

@@ -8,11 +8,11 @@ import (
 	"github.com/dmikalova/keyforge-data/query"
 )
 
-// Chips returns the top-level terms of a query in canonical form: each
+// Terms returns the top-level terms of a query in canonical form: each
 // child of the top AND (a term, a negated term, a comma list, or a group in
-// parentheses), then each directive. The search bar shows one chip for each.
-// Joined with spaces, the chips are the canonical query.
-func (e *Engine) Chips(src string) ([]string, error) {
+// parentheses), then each directive. Joined with spaces, the terms are the
+// canonical query. The facets use them to add and remove a term.
+func (e *Engine) Terms(src string) ([]string, error) {
 	q, err := e.Parse(src)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (e *Engine) Chips(src string) ([]string, error) {
 		for _, c := range root.Children {
 			s := (&query.Query{Root: c}).String()
 			// An OR inside the top AND needs its parentheses, so the joined
-			// chips keep the meaning. A comma list does not.
+			// terms keep the meaning. A comma list does not.
 			if or, ok := c.(*query.Or); ok && (!or.List || strings.Contains(s, " or ")) {
 				s = "(" + s + ")"
 			}
@@ -55,26 +55,26 @@ func (e *Engine) canonical(term string) string {
 	return q.String()
 }
 
-// HasChip reports whether the chips hold the term.
-func (e *Engine) HasChip(chips []string, term string) bool {
-	return slices.Contains(chips, e.canonical(term))
+// HasTerm reports whether the terms hold the term.
+func (e *Engine) HasTerm(terms []string, term string) bool {
+	return slices.Contains(terms, e.canonical(term))
 }
 
 // Toggle returns the query without the term if the query has it at the top
 // level, or with the term added at the end. A query with a parse error gets
 // the term added.
 func (e *Engine) Toggle(src, term string) string {
-	chips, err := e.Chips(src)
+	terms, err := e.Terms(src)
 	if err != nil {
 		return AddTerm(src, term)
 	}
 
 	t := e.canonical(term)
-	if i := slices.Index(chips, t); i >= 0 {
-		return strings.Join(slices.Delete(chips, i, i+1), " ")
+	if i := slices.Index(terms, t); i >= 0 {
+		return strings.Join(slices.Delete(terms, i, i+1), " ")
 	}
 
-	return strings.Join(append(chips, t), " ")
+	return strings.Join(append(terms, t), " ")
 }
 
 // Card returns the card with the ID, or nil.

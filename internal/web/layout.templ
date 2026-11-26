@@ -48,10 +48,10 @@ templ page(title, description string, v PageView, live bool) {
 	</html>
 }
 
-// SearchBar is the query bar: a chip for each committed term, and the draft
-// input. The input can sit between two chips ($pos is the index of the chip
-// after it, or -1 for the end), so the user can type a term there. Without
-// JavaScript, the form sends the chips and the draft.
+// SearchBar is the query bar: one text input with the query. The results
+// change as the user types. A focus or a click opens the completion list
+// (#ac), which search.js fills from the completions in the page. Without
+// JavaScript, the form sends the query.
 templ SearchBar(v PageView, live bool) {
 	<form
 		id="bar"
@@ -63,59 +63,34 @@ templ SearchBar(v PageView, live bool) {
 			data-on:submit__prevent={ action("commit") }
 		}
 	>
-		<div class="chipbar" data-on:click="evt.target === el && kfsearch.placeCaret(evt)">
-			@Chips(v.Chips, live)
-			<input type="hidden" name="q" value={ chipQuery(v.Chips) }/>
+		<div class="qwrap">
 			<input
 				id="q"
-				name="d"
+				name="q"
 				type="search"
-				value={ v.Draft }
-				placeholder={ placeholder(v.Chips) }
+				value={ v.Query }
+				placeholder={ placeholder }
 				autocomplete="off"
+				autocapitalize="off"
 				spellcheck="false"
 				enterkeyhint="search"
 				aria-label="Query"
+				role="combobox"
+				aria-expanded="false"
 				aria-autocomplete="list"
 				aria-controls="ac"
 				if live {
-					data-bind:draft
-					data-style:order="$pos < 0 ? 100000 : 2 * $pos - 1"
-					data-attr:data-pos="$pos"
-					data-on:kfset__window="evt.detail.pos !== undefined && ($pos = evt.detail.pos); evt.detail.q !== undefined && ($q = evt.detail.q)"
+					data-bind:q
 					data-on:input__debounce.250ms={ action("type") }
-					data-on:paste="setTimeout(() => kfsearch.pasted(), 0)"
-					data-on:keydown={ "evt.key === 'Backspace' && $draft === '' && el.selectionStart === 0 && $pos !== 0 && " + action("pop") }
 				}
 			/>
 			<ul id="ac" class="ac" role="listbox" hidden></ul>
 		</div>
-		<input type="hidden" name="fz" value="1"/>
 		<button type="submit" class="primary">Search</button>
 		<p id="qerror" class="qerror" role="status"></p>
 	</form>
 }
 
-// Chips are the committed terms. A click on a chip's text moves it to the
-// draft for editing. The × removes it. Each chip has a flex order, so the
-// draft input can sit between two chips.
-templ Chips(chips []Chip, live bool) {
-	<span id="chips" class="chips">
-		for _, c := range chips {
-			<span class={ "chip", templ.KV("neg", c.Negated) } style={ chipOrder(c.Index) } data-i={ itoa(c.Index) } data-term={ c.Text }>
-				if live {
-					<button type="button" class="chip-text" title="Edit" data-on:click={ action("edit", "i", itoa(c.Index)) }>
-						@icon(c.Icon)
-						{ c.Text }
-					</button>
-					<button type="button" class="chip-x" aria-label={ "Remove " + c.Text } data-on:click={ action("remove", "i", itoa(c.Index)) }>×</button>
-				} else {
-					<span class="chip-text">{ c.Text }</span>
-				}
-			</span>
-		}
-	</span>
-}
 
 // DownloadLink downloads the results as JSON.
 templ DownloadLink(q string) {

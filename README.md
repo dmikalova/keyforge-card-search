@@ -19,7 +19,7 @@ is a fan project and is not affiliated with Ghost Galaxy.
 | ----------------- | ------------------------------------------------------------- |
 | `GET /?q=`        | The search page with the first batch and the facets           |
 | `GET /batch`      | The next batch, as a Datastar event stream                    |
-| `GET /results`    | A search bar operation (type, Enter, chip, facet), as events  |
+| `GET /results`    | A search bar operation (type, Enter, facet), as events        |
 | `GET /card`       | The card view, or a random card of the query, as events       |
 | `GET /random?q=`  | A redirect to one random card of the query, without JS        |
 | `GET /syntax`     | The query syntax                                              |

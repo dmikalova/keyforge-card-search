@@ -51,16 +51,12 @@ func TestTextParts(t *testing.T) {
 }
 
 func TestIcons(t *testing.T) {
-	if i := chipIcon("h:dis"); i.URL != iconBase+"house/dis.webp" || i.Mask {
-		t.Errorf("h:dis icon = %+v", i)
+	if i := HouseIcon("dis", "Dis"); i.URL != iconBase+"house/dis.webp" || i.Mask {
+		t.Errorf("dis icon = %+v", i)
 	}
 
-	if i := chipIcon("-type:creature"); i.URL != iconBase+"type/creature.svg" || !i.Mask {
-		t.Errorf("-type:creature icon = %+v", i)
-	}
-
-	if i := chipIcon("h:dis,logos"); i.URL != "" {
-		t.Errorf("a list chip has no icon: %+v", i)
+	if i := TypeIcon("creature", "Creature"); i.URL != iconBase+"type/creature.svg" || !i.Mask {
+		t.Errorf("creature icon = %+v", i)
 	}
 
 	if i := HouseIcon("elders", "Elders"); i.URL != "" {

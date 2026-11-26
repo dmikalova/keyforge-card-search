@@ -11,6 +11,8 @@ import (
 type CompleteField struct {
 	Name  string `json:"name"`
 	Alias string `json:"alias,omitempty"`
+	// Desc says in a few words what the field matches.
+	Desc string `json:"desc,omitempty"`
 	// Values are the values that the bar suggests after "name:". A sort
 	// value is a comma list, so the bar suggests each key after a comma.
 	Values []string `json:"values,omitempty"`
@@ -41,7 +43,7 @@ func (e *Engine) Completions() Completions {
 	out := Completions{Version: e.version}
 
 	for _, f := range e.reg.Fields() {
-		cf := CompleteField{Name: f.Name, Alias: f.Alias}
+		cf := CompleteField{Name: f.Name, Alias: f.Alias, Desc: fieldDocs[f.Name]}
 
 		switch {
 		case f.Name == "trait":
@@ -68,4 +70,31 @@ func (e *Engine) Completions() Completions {
 	}
 
 	return out
+}
+
+// fieldDocs are the short descriptions that the search bar shows next to
+// each field.
+var fieldDocs = map[string]string{
+	"name":            "Card name",
+	"text":            "Card text",
+	"flavor":          "Flavor text",
+	"house":           "House",
+	FieldGroup:        "Houseless group: anomaly, prophecy",
+	"set":             "Printed in the set",
+	"first":           "First printed in the set",
+	"type":            "Card type",
+	"rarity":          "Rarity",
+	"keyword":         "Keyword, with a number: keyword:assault>=2",
+	"ability":         "Ability trigger: play, fight, reap",
+	"trait":           "Trait",
+	query.NumberField: "Collector number",
+	"power":           "Power, or x",
+	"armor":           "Armor",
+	"aember":          "Bonus æmber",
+	"enhance":         "Enhance icons: enhance:damage>=1",
+	query.FlagField:   "Flag: anomaly, reprint, houseless",
+	DirSort:           "Sort keys, comma list, -key for descending",
+	DirOrder:          "Order: asc or desc",
+	DirUnique:         "unique:prints shows each printing",
+	DirSeed:           "Seed of sort:random",
 }

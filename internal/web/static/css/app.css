@@ -124,76 +124,26 @@ code {
   align-items: center;
 }
 
-/* The search bar: the chips, then the draft input, in one box. */
-.chipbar {
+/* The search bar: one text input, and the completion list under it. */
+.qwrap {
   flex: 1 1 260px;
   position: relative;
   min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.4rem;
+}
+
+.qwrap input {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
   border-radius: var(--radius);
   border: 1px solid var(--muted);
   background: var(--card);
-  cursor: text;
-}
-
-.chipbar:focus-within {
-  outline: 2px solid var(--primary);
-}
-
-.chipbar input {
-  flex: 1 1 8rem;
-  min-width: 6rem;
-  padding: 0.25rem 0.3rem;
-  border: 0;
-  background: transparent;
   color: var(--on-surface);
-  outline: none;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.95rem;
 }
 
-.chips {
-  display: contents;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--primary-dark);
-  font-size: 0.9rem;
-}
-
-.chip.neg {
-  border-color: var(--error);
-}
-
-.chip button,
-.chip span {
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.chip-text {
-  padding: 0.1rem 0.15rem 0.1rem 0.6rem;
-  overflow-wrap: anywhere;
-  text-align: left;
-}
-
-.chip-x {
-  padding: 0.1rem 0.5rem 0.1rem 0.3rem;
-  color: var(--muted);
-}
-
-.chip-x:hover {
-  color: var(--error);
+.qwrap input:focus {
+  outline: 2px solid var(--primary);
 }
 
 .qerror {
@@ -611,9 +561,10 @@ main {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
+  right: 0;
   z-index: 30;
-  min-width: 12rem;
-  max-width: 100%;
+  max-height: min(60vh, 26rem);
+  overflow-y: auto;
   list-style: none;
   padding: 0.25rem;
   border-radius: var(--radius);
@@ -627,11 +578,27 @@ main {
 }
 
 .ac li {
-  padding: 0.2rem 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  font-family: ui-monospace, Menlo, monospace;
   font-size: 0.9rem;
+}
+
+.ac-text {
+  flex: none;
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.ac-note {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ac li[aria-selected="true"],
@@ -687,8 +654,7 @@ main {
   }
 }
 
-/* The results change as the user types, and Enter makes the chips, so a
-   narrow screen does not need the Search button. */
+/* The results change as the user types, so a narrow screen does not need the Search button. */
 @media (max-width: 720px) {
   .query button.primary {
     display: none;
@@ -713,8 +679,7 @@ main {
 }
 
 .zoom dd .ico,
-.printing .ico,
-.chip-text .ico {
+.printing .ico {
   margin-right: 0.3em;
 }
 

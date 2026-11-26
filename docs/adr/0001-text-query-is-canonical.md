@@ -8,8 +8,8 @@ language with more fields. Ratings come later.
 
 ## Decision
 
-The text query is the source of truth. The URL holds it. The search bar shows
-its top-level terms as chips, and the facets add and remove terms in it.
+The text query is the source of truth. The URL holds it. The search bar is a
+plain text input that holds it, and the facets add and remove terms in it.
 
 Grammar:
 
@@ -83,6 +83,8 @@ Rules:
 
 - A user can copy the URL, edit the query, or click controls. All three give
   the same state.
-- A chip is a top-level term in canonical form. A group in parentheses or an
-  OR is one chip.
+- A facet toggles a top-level term in canonical form. A group in parentheses
+  or an OR is one term.
+- The search bar had chips for a short time. The user found the completion
+  list more useful, so the bar is plain text again.
 - Deck search adds fields to the same registry.

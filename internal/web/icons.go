@@ -127,26 +127,6 @@ func facetIcon(group, key, label string) Icon {
 	return Icon{}
 }
 
-// chipTermRe reads a chip with one value: "h:dis", "-type:creature".
-var chipTermRe = regexp.MustCompile(`^-?(h|house|t|type|r|rarity):([a-z]+)$`)
-
-// chipIcon returns the icon of a chip with one house, type, or rarity.
-func chipIcon(text string) Icon {
-	m := chipTermRe.FindStringSubmatch(strings.ToLower(text))
-	if m == nil {
-		return Icon{}
-	}
-
-	switch m[1] {
-	case "h", "house":
-		return HouseIcon(m[2], m[2])
-	case "t", "type":
-		return TypeIcon(m[2], m[2])
-	default:
-		return RarityIcon(m[2])
-	}
-}
-
 // TextPart is a run of card text. Bold runs are the ability triggers.
 type TextPart struct {
 	Text string

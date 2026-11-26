@@ -20,8 +20,7 @@ A term that changes the display and does not filter: `sort:`, `order:`,
 `unique:`, `seed:`.
 
 **Builder**:
-The panel of controls (house icons, set icons, chips, number ranges, text
-boxes) that writes terms to the query. If the query has a structure that the
+The panel of controls (house icons, set icons, number ranges, text boxes) that writes terms to the query. If the query has a structure that the
 builder cannot show, the builder shows "custom query" and becomes read-only.
 
 **Result**:

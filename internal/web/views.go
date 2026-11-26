@@ -68,16 +68,6 @@ type FacetLink struct {
 	Icon Icon
 }
 
-// Chip is one top-level term of the query in the search bar.
-type Chip struct {
-	Text  string
-	Index int
-	// Negated is true for a term with a minus sign.
-	Negated bool
-	// Icon is the icon of a one-value house, type, or rarity chip.
-	Icon Icon
-}
-
 // Results is the part of the search page that a new query replaces: the
 // count, the facets, and the first tiles, or the parse error.
 type Results struct {
@@ -91,12 +81,8 @@ type Results struct {
 
 // PageView is the search page.
 type PageView struct {
-	// Query is the whole query: the chips and the draft.
+	// Query is the query text in the search bar.
 	Query string
-	// Chips are the committed terms. Draft is the text in the input after
-	// the chips. A query with a parse error has no chips: it is all draft.
-	Chips []Chip
-	Draft string
 	Results
 	// Missing is true when the card dataset is not published yet.
 	Missing bool
@@ -107,40 +93,19 @@ type PageView struct {
 	Card *CardView
 }
 
-// Signals returns the Datastar signals of the page: the committed query,
-// the draft, and the place of the draft among the chips.
+// Signals returns the Datastar signals of the page: the query text.
 func (v PageView) Signals() string {
-	return SignalsJSON(strings.Join(chipTexts(v.Chips), " "), v.Draft)
+	return SignalsJSON(v.Query)
 }
 
-// SignalsJSON returns the Datastar signals object. The draft goes at the
-// end of the chips (pos -1).
-func SignalsJSON(q, draft string) string {
-	b, err := json.Marshal(map[string]any{"q": q, "draft": draft, "pos": -1})
+// SignalsJSON returns the Datastar signals object of the search bar.
+func SignalsJSON(q string) string {
+	b, err := json.Marshal(map[string]any{"q": q})
 	if err != nil {
 		return "{}"
 	}
 
 	return string(b)
-}
-
-func chipTexts(chips []Chip) []string {
-	out := make([]string, len(chips))
-	for i, c := range chips {
-		out[i] = c.Text
-	}
-
-	return out
-}
-
-// NewChips makes the chips of the terms.
-func NewChips(terms []string) []Chip {
-	out := make([]Chip, len(terms))
-	for i, t := range terms {
-		out[i] = Chip{Text: t, Index: i, Negated: strings.HasPrefix(t, "-"), Icon: chipIcon(t)}
-	}
-
-	return out
 }
 
 // NewTiles makes the tiles of the items. The first item has the index
@@ -202,7 +167,7 @@ const facetTop = 12
 // NewFacets makes the facet groups of a result. Each link toggles its term
 // in the query.
 func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
-	chips, _ := e.Chips(q)
+	terms, _ := e.Terms(q)
 
 	group := func(name string, counts []search.Count, long bool) FacetGroup {
 		g := FacetGroup{Name: name}
@@ -217,7 +182,7 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 				Label:   c.Label,
 				N:       c.N,
 				Term:    c.Term,
-				Active:  e.HasChip(chips, c.Term),
+				Active:  e.HasTerm(terms, c.Term),
 				URL:     SearchURL(e.Toggle(q, c.Term)),
 				Percent: c.N * 100 / max(top, 1),
 				Icon:    facetIcon(name, c.Key, c.Label),
@@ -530,18 +495,8 @@ func FirstCount(at, total int) int {
 	return min(n, total)
 }
 
-// chipQuery returns the committed query of the chips.
-func chipQuery(chips []Chip) string {
-	return strings.Join(chipTexts(chips), " ")
-}
-
-func placeholder(chips []Chip) string {
-	if len(chips) > 0 {
-		return "Add a term"
-	}
-
-	return "Search cards: h:brobnar p>=5 or k:elusive"
-}
+// placeholder is the hint in the empty search bar.
+const placeholder = "Search cards: h:brobnar p>=5 or k:elusive"
 
 func toggleTitle(c FacetLink) string {
 	if c.Active {
@@ -613,12 +568,6 @@ func thumb(c *card.Card) string {
 	return ""
 }
 
-// chipOrder is the flex order of a chip. The draft input has the odd order
-// before the chip that follows it, so it can sit between two chips.
-func chipOrder(i int) templ.SafeCSS {
-	return templ.SafeCSS("order:" + strconv.Itoa(2*i))
-}
-
 // CardURL returns the page URL that opens the card view of a card.
 func CardURL(id string) string {
 	return "/?card=" + url.QueryEscape(id)
@@ -627,18 +576,6 @@ func CardURL(id string) string {
 // CompleteJSON returns the completions as JSON for the page.
 func CompleteJSON(c search.Completions) string {
 	b, err := json.Marshal(c)
-	if err != nil {
-		return "{}"
-	}
-
-	return string(b)
-}
-
-// BarSignalsJSON returns the Datastar signals of the search bar after an
-// operation: the chips, the draft, and the place of the draft (-1 for the
-// end).
-func BarSignalsJSON(q, draft string, pos int) string {
-	b, err := json.Marshal(map[string]any{"q": q, "draft": draft, "pos": pos})
 	if err != nil {
 		return "{}"
 	}
