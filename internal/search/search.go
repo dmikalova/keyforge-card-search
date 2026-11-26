@@ -57,6 +57,8 @@ type Engine struct {
 	setRank map[string]int
 	version string
 	at      time.Time
+	// artistAliases are the other spellings of each artist.
+	artistAliases map[string][]string
 }
 
 // New returns an engine for the dataset. The engine keeps the dataset.
@@ -67,11 +69,12 @@ func New(ds *card.Dataset) (*Engine, error) {
 	}
 
 	e := &Engine{
-		sets:    setList,
-		setRank: map[string]int{},
-		prints:  map[*card.Card][]*Entry{},
-		version: ds.Version,
-		at:      ds.Generated,
+		sets:          setList,
+		setRank:       map[string]int{},
+		prints:        map[*card.Card][]*Entry{},
+		version:       ds.Version,
+		at:            ds.Generated,
+		artistAliases: aliasesByArtist(ds.ArtistAliases),
 	}
 	for i, s := range setList {
 		e.setRank[s.Slug] = i

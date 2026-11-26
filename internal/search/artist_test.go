@@ -155,3 +155,31 @@ func ids0(r *Result) []string {
 
 	return out
 }
+
+// TestArtistAliases checks that another spelling of an artist finds the
+// printings of that artist.
+func TestArtistAliases(t *testing.T) {
+	ds, err := fixture.Dataset()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ds.Cards[0].Printings[0].Artist = "Mateusz Mizak"
+	ds.ArtistAliases = map[string]string{"Matthew Mizak": "Mateusz Mizak"}
+
+	e, err := New(ds)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, q := range []string{`artist:"Matthew Mizak"`, "art:matthew", "art:mateusz"} {
+		r, err := e.Search(q)
+		if err != nil {
+			t.Fatal(q, err)
+		}
+
+		if got := ids0(r); !slices.Equal(got, []string{ds.Cards[0].ID}) {
+			t.Errorf("%s = %v, want %v", q, got, ds.Cards[0].ID)
+		}
+	}
+}

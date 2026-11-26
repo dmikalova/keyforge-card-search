@@ -18,15 +18,27 @@ const ArtistNone = "none"
 const noArtist = "\x01"
 
 // artists returns the artists of the entry's printings, with noArtist for
-// a printing without one.
-func artists(en *Entry) []string {
+// a printing without one. Each artist comes with its other spellings, so
+// "artist:matthew" finds Mateusz Mizak.
+func (e *Engine) artists(en *Entry) []string {
 	return each(en, func(p *card.Printing) []string {
 		if p.Artist == "" {
 			return []string{noArtist}
 		}
 
-		return []string{p.Artist}
+		return append([]string{p.Artist}, e.artistAliases[p.Artist]...)
 	})
+}
+
+// aliasesByArtist returns the other spellings of each artist from the
+// dataset's map of spelling to artist.
+func aliasesByArtist(m map[string]string) map[string][]string {
+	out := map[string][]string{}
+	for alias, name := range m {
+		out[name] = append(out[name], alias)
+	}
+
+	return out
 }
 
 // forMatch returns the query that the matcher runs: "artist:none" becomes an

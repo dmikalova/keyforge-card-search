@@ -199,7 +199,7 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 			// finds Fábio Perez. "artist:none" finds a printing without an
 			// artist (forMatch).
 			Name: FieldArtist, Alias: "art", Kind: query.KindText,
-			Strings: artists,
+			Strings: e.artists,
 		},
 		// The sort value is a comma list of sortKeys. Engine.Parse checks it.
 		{Name: DirSort, Kind: query.KindDirective},
