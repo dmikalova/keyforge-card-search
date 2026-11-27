@@ -273,10 +273,13 @@ func (c *checker) cardFilters() {
 	c.click(".grid .tile")
 	c.expect("card view opens", c.zoomOpen(), "")
 
+	// The first reprint is a creature in the fixture and an action in the
+	// live data, so the check reads the term from the button.
 	typeBtn := `#zoom .cv-filter[data-term^="type:"]`
+	term := c.eval(`document.querySelector('` + typeBtn + `')?.dataset.term || ''`)
 	c.jsClick(typeBtn)
 	q := c.bar()
-	c.expect("type click adds the term", strings.Contains(q, "type:creature"), q)
+	c.expect("type click adds the term", term != "" && strings.Contains(q, term), term+" in "+q)
 	c.expect("card view stays open", c.zoomOpen(), "")
 	c.expect("type value is marked", c.buttonState(typeBtn) == "active", c.buttonState(typeBtn))
 	c.shot("card-filter")
@@ -356,6 +359,21 @@ func (c *checker) cardViewHoldsScroll() {
 	c.wait(600 * time.Millisecond)
 	after := c.eval(`String(window.scrollY)`)
 	c.expect("card view holds the page", before == after && before != "0", before+" then "+after)
+
+	// On a touch screen the page is not locked with overflow: hidden, which
+	// can stop a one-finger pan of a pinch-zoomed page. The card view holds
+	// the page by itself: it can always scroll, and its overscroll stays in
+	// it.
+	if c.w.mobile {
+		c.must(chromedp.Run(c.ctx, emulation.SetTouchEmulationEnabled(true)))
+		c.wait(300 * time.Millisecond)
+		got := c.eval(
+			`(() => { const z = getComputedStyle(document.getElementById('zoom')); const zoom = document.getElementById('zoom'); return [matchMedia('(pointer: coarse)').matches, getComputedStyle(document.documentElement).overflow, z.overscrollBehaviorY, zoom.scrollHeight > zoom.clientHeight].join(' ') })()`,
+		)
+		c.expect("touch: page not locked, card view contains its scroll",
+			got == "true visible contain true", got)
+		c.must(chromedp.Run(c.ctx, emulation.SetTouchEmulationEnabled(false)))
+	}
 	c.setSlider(6)
 }
 

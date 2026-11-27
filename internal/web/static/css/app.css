@@ -513,6 +513,28 @@ html:has(.syntax-modal:not([hidden])) {
   overflow: hidden;
 }
 
+/* On a touch screen, overflow: hidden on the page can stop a one-finger pan
+   of a pinch-zoomed page. There the card view holds the page by itself: it
+   always scrolls by at least 1px (the ::after spacer), and the overscroll
+   stays in it, so a drag does not move the cards under it. */
+@media (pointer: coarse) {
+  html:has(.zoom:not([hidden])),
+  html:has(.syntax-modal:not([hidden])) {
+    overflow: visible;
+  }
+
+  .zoom {
+    overscroll-behavior: contain;
+  }
+
+  .zoom::after {
+    content: "";
+    flex: none;
+    width: 0;
+    height: calc(100% + 1px);
+  }
+}
+
 .zoom[hidden] {
   display: none;
 }
@@ -1165,4 +1187,16 @@ mark.diff {
 #feedback-status {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+/* The mark on a set chip whose printing shows another printing's art. */
+.maverick-note {
+  margin-left: 0.2rem;
+  padding: 0 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--muted);
+  border: 1px solid currentColor;
 }
