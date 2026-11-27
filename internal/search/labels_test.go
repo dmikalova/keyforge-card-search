@@ -37,3 +37,19 @@ func TestChangedFlag(t *testing.T) {
 		t.Errorf("is:changed = %d items", len(r.Items))
 	}
 }
+
+func TestFlagLabels(t *testing.T) {
+	l := Labels{"groups": {"skybeast": "Skybeast", "anomaly": "Anomaly"}}
+	for in, want := range map[string]string{
+		"tokencreature": "Token Creature",
+		"eviltwin":      "Evil Twin",
+		"gigantic":      "Gigantic",
+		"skybeast":      "Skybeast",
+		"anomaly":       "Anomaly",
+		"revenant":      "Revenant",
+	} {
+		if got := l.Flag(in); got != want {
+			t.Errorf("Flag(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

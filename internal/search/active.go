@@ -372,6 +372,8 @@ func (e *Engine) facetLabel(field, value string) string {
 		return e.labels.Ability(value)
 	case "trait":
 		return traitLabel(value)
+	case "is":
+		return e.labels.Flag(value)
 	}
 
 	return value

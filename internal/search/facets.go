@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/dmikalova/keyforge-data/card"
-	"github.com/dmikalova/keyforge-data/derive"
 	"github.com/dmikalova/keyforge-data/sets"
 )
 
@@ -44,88 +43,130 @@ type Facets struct {
 	Keywords  []Count
 	Abilities []Count
 	Traits    []Count
+	// Flags count the cards that have each "is:" flag, most first.
+	Flags []Count
 	// Artists count the cards that have a printing by each artist, most
 	// first. It is empty while the dataset has no artists.
 	Artists []Count
 }
 
-func (e *Engine) count(items []Item) Facets {
-	houses := map[string]int{}
-	types := map[string]int{}
-	rarities := map[string]int{}
-	setCounts := map[string]int{}
-	power := map[string]int{}
-	armor := map[string]int{}
-	aember := map[string]int{}
-	keywords := map[string]int{}
-	abilities := map[string]int{}
-	traits := map[string]int{}
-	artistCounts := map[string]int{}
+// tally holds the counts of the facets while count reads the results.
+type tally struct {
+	houses, types, rarities, sets, power, armor, aember map[string]int
+	keywords, abilities, traits, artists, flags         map[string]int
+}
 
-	// A set term matches a card that has a printing in the set, so the set
-	// facet counts each card one time in each set that it is in. The count
-	// is then the number of results of the query with the set term.
+func newTally() *tally {
+	return &tally{
+		houses: map[string]int{}, types: map[string]int{}, rarities: map[string]int{},
+		sets: map[string]int{}, power: map[string]int{}, armor: map[string]int{},
+		aember: map[string]int{}, keywords: map[string]int{}, abilities: map[string]int{},
+		traits: map[string]int{}, artists: map[string]int{}, flags: map[string]int{},
+	}
+}
+
+// card counts the printing values of a card one time: each set, artist, and
+// flag that one of its printings has, and each rarity if rarities is true.
+func (t *tally) card(e *Engine, c *card.Card, rarities bool) {
+	for _, code := range e.setCodes(c) {
+		t.sets[code]++
+	}
+
+	for _, a := range cardArtists(c) {
+		t.artists[a]++
+	}
+
+	if rarities {
+		for _, r := range cardRarities(c) {
+			t.rarities[r]++
+		}
+	}
+
+	// A flag term matches a card if one of its printings has the flag.
+	for _, fl := range e.flagTests {
+		if fl.Test(e.entryOf[c]) {
+			t.flags[fl.Name]++
+		}
+	}
+}
+
+// item counts the card values of one result.
+func (t *tally) item(it Item) {
+	c := it.Card
+	t.houses[houseBucket(c)]++
+	t.types[c.Type]++
+
+	for k := range c.Keywords {
+		t.keywords[k]++
+	}
+
+	for _, a := range c.Abilities {
+		t.abilities[a]++
+	}
+
+	for _, tr := range c.Traits {
+		t.traits[tr]++
+	}
+
+	t.aember[strconv.Itoa(c.Aember)]++
+
+	if p := c.Power; p != nil {
+		t.power[p.String()]++
+		t.armor[strconv.Itoa(c.Armor)]++
+	}
+}
+
+// count counts the results by facet value. A count is the number of
+// results that a click on the value finds. A printing term (set, rarity,
+// artist, a printing flag) matches a card if one of its printings matches,
+// so the printing facets count each card one time for each value that one
+// of its printings has. With unique:prints each result is a printing, so
+// the rarity facet counts each result by its own printing.
+func (e *Engine) count(items []Item, prints bool) Facets {
+	t := newTally()
 	counted := map[*card.Card]bool{}
 
 	for _, it := range items {
 		if !counted[it.Card] {
 			counted[it.Card] = true
-
-			for _, code := range e.setCodes(it.Card) {
-				setCounts[code]++
-			}
-
-			for _, a := range cardArtists(it.Card) {
-				artistCounts[a]++
-			}
+			t.card(e, it.Card, !prints)
 		}
 
-		houses[houseBucket(it.Card)]++
-		types[it.Card.Type]++
-		rarities[it.Printing.Rarity]++
-
-		for k := range it.Card.Keywords {
-			keywords[k]++
+		if prints {
+			t.rarities[it.Printing.Rarity]++
 		}
 
-		for _, a := range it.Card.Abilities {
-			abilities[a]++
-		}
-
-		for _, t := range it.Card.Traits {
-			traits[t]++
-		}
-
-		aember[strconv.Itoa(it.Card.Aember)]++
-
-		if p := it.Card.Power; p != nil {
-			power[p.String()]++
-			armor[strconv.Itoa(it.Card.Armor)]++
-		}
+		t.item(it)
 	}
 
 	f := Facets{
-		Houses: counts(houses, "h", e.labels.House, func(a, b string) int {
+		Houses: counts(t.houses, "h", e.labels.House, func(a, b string) int {
 			return cmp.Or(cmp.Compare(bucketRank(a), bucketRank(b)), cmp.Compare(a, b))
 		}),
-		Types: counts(types, "t", e.labels.Type, cmp.Compare[string]),
-		Rarities: counts(rarities, "r", func(s string) string { return s }, func(a, b string) int {
-			return cmp.Or(cmp.Compare(rarityRank(a), rarityRank(b)), cmp.Compare(a, b))
-		}),
-		Sets: counts(setCounts, "s", e.setLabel, func(a, b string) int {
+		Types: counts(t.types, "t", e.labels.Type, cmp.Compare[string]),
+		Rarities: counts(
+			t.rarities,
+			"r",
+			func(s string) string { return s },
+			func(a, b string) int {
+				return cmp.Or(cmp.Compare(rarityRank(a), rarityRank(b)), cmp.Compare(a, b))
+			},
+		),
+		Sets: counts(t.sets, "s", e.setLabel, func(a, b string) int {
 			return cmp.Or(cmp.Compare(e.codeIndex(a), e.codeIndex(b)), cmp.Compare(a, b))
 		}),
-		Power:     counts(power, "p", func(s string) string { return s }, compareNumbers),
-		Armor:     counts(armor, "ar", func(s string) string { return s }, compareNumbers),
-		Aember:    counts(aember, "a", func(s string) string { return s }, compareNumbers),
-		Keywords:  counts(keywords, "k", keywordLabel, byCount(keywords)),
-		Abilities: counts(abilities, "ab", e.labels.Ability, abilityOrder),
-		Traits:    counts(traits, "tr", traitLabel, byCount(traits)),
+		Power:     counts(t.power, "p", func(s string) string { return s }, compareNumbers),
+		Armor:     counts(t.armor, "ar", func(s string) string { return s }, compareNumbers),
+		Aember:    counts(t.aember, "a", func(s string) string { return s }, compareNumbers),
+		Keywords:  counts(t.keywords, "k", keywordLabel, byCount(t.keywords)),
+		Abilities: counts(t.abilities, "ab", e.labels.Ability, byCount(t.abilities)),
+		Traits:    counts(t.traits, "tr", traitLabel, byCount(t.traits)),
+		Flags:     counts(t.flags, "is", e.labels.Flag, byCount(t.flags)),
 		Artists: counts(
-			artistCounts,
+			t.artists,
 			"art",
 			func(s string) string { return s },
-			byCount(artistCounts),
+			byCount(t.artists),
 		),
 	}
 
@@ -249,20 +290,6 @@ func capitalize(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
-// abilityOrder orders the abilities as people read them: Play, Fight, Reap,
-// and then the other triggers (derive.Abilities).
-func abilityOrder(a, b string) int {
-	rank := func(s string) int {
-		if i := slices.Index(derive.Abilities, s); i >= 0 {
-			return i
-		}
-
-		return len(derive.Abilities)
-	}
-
-	return cmp.Or(cmp.Compare(rank(a), rank(b)), cmp.Compare(a, b))
-}
-
 // setCodes returns the codes of the sets that a card has a printing in, one
 // time each.
 func (e *Engine) setCodes(c *card.Card) []string {
@@ -295,6 +322,7 @@ func (e *Engine) setLabel(code string) string {
 var facetFields = map[string]string{
 	"h": "house", "t": "type", "r": "rarity", "s": "set", "p": "power", "ar": "armor",
 	"a": "aember", "k": "keyword", "ab": "ability", "tr": "trait", "art": "artist",
+	"is": "is",
 }
 
 // cardArtists returns the artists of a card's printings, one time each,
@@ -305,6 +333,19 @@ func cardArtists(c *card.Card) []string {
 	for _, p := range c.Printings {
 		if p.Artist != "" && !slices.Contains(out, p.Artist) {
 			out = append(out, p.Artist)
+		}
+	}
+
+	return out
+}
+
+// cardRarities returns the rarities of a card's printings, one time each.
+func cardRarities(c *card.Card) []string {
+	var out []string
+
+	for _, p := range c.Printings {
+		if p.Rarity != "" && !slices.Contains(out, p.Rarity) {
+			out = append(out, p.Rarity)
 		}
 	}
 

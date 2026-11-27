@@ -3,6 +3,10 @@ package search
 import (
 	"slices"
 	"testing"
+
+	"github.com/dmikalova/keyforge-data/card"
+
+	"github.com/dmikalova/keyforge-card-search/internal/fixture"
 )
 
 func TestTerms(t *testing.T) {
@@ -76,11 +80,103 @@ func TestAbilityFieldAndFacets(t *testing.T) {
 	}
 }
 
-func TestAbilityOrder(t *testing.T) {
-	got := []string{"reap", "action", "fight", "play", "omni"}
-	slices.SortFunc(got, abilityOrder)
+// TestFacetsSortAbilitiesAndFlagsByCount checks that the ability and flag
+// facets put the value with the most results first.
+func TestFacetsSortAbilitiesAndFlagsByCount(t *testing.T) {
+	ds, err := fixture.Dataset()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Play is first in the printed order, but reap has the most cards.
+	ds.Cards[0].Abilities = []string{"play", "reap"}
+	ds.Cards[1].Abilities = []string{"reap"}
+	ds.Cards[2].Abilities = []string{"reap", "fight"}
+	e, err := New(ds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := e.Search("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, cs := range map[string][]Count{
+		"ability": res.Facets.Abilities, "flag": res.Facets.Flags,
+	} {
+		if len(cs) == 0 {
+			t.Fatalf("no %s facet", name)
+		}
+		for i := 1; i < len(cs); i++ {
+			if cs[i].N > cs[i-1].N {
+				t.Errorf("%s facet not by count: %v", name, cs)
+			}
+		}
+	}
+	if res.Facets.Abilities[0].Value != "reap" {
+		t.Errorf("first ability = %q, want reap", res.Facets.Abilities[0].Value)
+	}
+	for _, c := range res.Facets.Flags {
+		if c.Term != "is:"+c.Value || c.Field != "is" {
+			t.Errorf("flag count %+v", c)
+		}
+	}
+}
 
-	if want := []string{"play", "fight", "reap", "action", "omni"}; !slices.Equal(got, want) {
-		t.Errorf("ability order = %v, want %v", got, want)
+// TestFacetCountsMatchTheirClick checks that each facet count is the number
+// of results that a click on the value finds.
+func TestFacetCountsMatchTheirClick(t *testing.T) {
+	ds, err := fixture.Dataset()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A card with an anomaly printing beside its normal printing: the
+	// rarity facet counts it under both rarities.
+	c := &ds.Cards[0]
+	c.Printings = append(c.Printings, card.Printing{
+		Set: "worldscollide", Number: "A99", Rarity: "Anomaly", Anomaly: true,
+	})
+	e, err := New(ds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	all, err := e.Search("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(all.Facets.Rarities, func(c Count) bool {
+		return c.Value == "Anomaly" && c.N == 1
+	}) {
+		t.Errorf("rarities = %v, want Anomaly 1", all.Facets.Rarities)
+	}
+	for _, q := range []string{"", "h:brobnar", "t:creature", "s:cota", "r:rare"} {
+		res, err := e.Search(q)
+		if err != nil {
+			t.Fatal(q, err)
+		}
+		checkFacetCounts(t, e, q, res.Facets)
+	}
+}
+
+func checkFacetCounts(t *testing.T, e *Engine, q string, f Facets) {
+	t.Helper()
+	for _, cs := range [][]Count{
+		f.Houses, f.Types, f.Rarities, f.Sets, f.Power, f.Armor, f.Aember,
+		f.Keywords, f.Abilities, f.Traits, f.Artists, f.Flags,
+	} {
+		for _, c := range cs {
+			state, _ := e.Filters(q).State(c.Field, c.Value)
+			if state != StateNone {
+				continue
+			}
+			clicked := e.Toggle(q, c.Term)
+			res, err := e.Search(clicked)
+			if err != nil {
+				t.Errorf("%q: %v", clicked, err)
+				continue
+			}
+			if len(res.Items) != c.N {
+				t.Errorf("query %q: %s %q counts %d, but %q finds %d",
+					q, c.Field, c.Value, c.N, clicked, len(res.Items))
+			}
+		}
 	}
 }

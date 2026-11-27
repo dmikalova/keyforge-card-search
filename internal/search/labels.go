@@ -47,3 +47,25 @@ func (l Labels) Group(g string) string { return l.get(labelGroups, g) }
 
 // Labels returns the labels of the dataset.
 func (e *Engine) Labels() Labels { return e.labels }
+
+// flagNames are the names of the flags that the dataset labels do not name.
+// They are a choice of this site.
+var flagNames = map[string]string{
+	FlagTokenCreature: "Token Creature",
+	FlagEvilTwin:      "Evil Twin",
+	FlagChanged:       "Text Changed",
+}
+
+// Flag returns the name of an "is:" flag: "tokencreature" is "Token
+// Creature". A houseless kind (skybeast) uses its group label.
+func (l Labels) Flag(f string) string {
+	if s, ok := l[labelGroups][f]; ok && s != "" {
+		return s
+	}
+
+	if s, ok := flagNames[f]; ok {
+		return s
+	}
+
+	return capitalize(f)
+}

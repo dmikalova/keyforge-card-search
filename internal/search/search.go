@@ -61,6 +61,10 @@ type Engine struct {
 	artistAliases map[string][]string
 	// labels are the names of the data values for people.
 	labels Labels
+	// flagTests are the "is:" flags in order, for the flag facet.
+	flagTests []query.Flag[*Entry]
+	// entryOf is the entry with all the printings of each card.
+	entryOf map[*card.Card]*Entry
 }
 
 // New returns an engine for the dataset. The engine keeps the dataset.
@@ -74,6 +78,7 @@ func New(ds *card.Dataset) (*Engine, error) {
 		sets:          setList,
 		setRank:       map[string]int{},
 		prints:        map[*card.Card][]*Entry{},
+		entryOf:       map[*card.Card]*Entry{},
 		version:       ds.Version,
 		at:            ds.Generated,
 		artistAliases: aliasesByArtist(ds.ArtistAliases),
@@ -83,7 +88,9 @@ func New(ds *card.Dataset) (*Engine, error) {
 		e.setRank[s.Slug] = i
 	}
 
-	reg, err := query.NewRegistry(e.fields(ds.Cards), e.flags(ds.Cards))
+	e.flagTests = e.flags(ds.Cards)
+
+	reg, err := query.NewRegistry(e.fields(ds.Cards), e.flagTests)
 	if err != nil {
 		return nil, err
 	}
@@ -104,6 +111,7 @@ func New(ds *card.Dataset) (*Engine, error) {
 		}
 
 		e.cards = append(e.cards, all)
+		e.entryOf[c] = all
 	}
 
 	return e, nil
@@ -173,7 +181,7 @@ func (e *Engine) Search(src string) (*Result, error) {
 		return nil, err
 	}
 
-	return &Result{Query: q, Items: items, Facets: e.count(items)}, nil
+	return &Result{Query: q, Items: items, Facets: e.count(items, prints)}, nil
 }
 
 // shown returns the results of a matched card. The candidates are the
