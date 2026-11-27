@@ -15,7 +15,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -81,7 +80,6 @@ type Loader struct {
 	engine  atomic.Pointer[search.Engine]
 	missing atomic.Bool
 	mu      sync.Mutex
-	etag    string
 	// version is the version of the loaded dataset.
 	version string
 }
@@ -122,69 +120,16 @@ func (l *Loader) Missing() bool {
 // errNotFound is the error of a dataset URL that gives 404.
 var errNotFound = errors.New("catalog: the dataset is not published")
 
-// pointerURL returns the URL of the pointer file (card.LatestPath) for the
-// dataset URL: the URL itself when it is the pointer, its sibling when it is
-// the dataset file (card.DatasetPath), or empty.
-func pointerURL(url string) string {
-	switch {
-	case strings.HasSuffix(url, "/"+card.LatestPath):
-		return url
-	case strings.HasSuffix(url, "/"+card.DatasetPath):
-		return strings.TrimSuffix(url, card.DatasetPath) + card.LatestPath
-	}
-
-	return ""
-}
-
-// Refresh reads the dataset if it changed since the last read. With a
-// pointer file (pointerURL), it reads the small pointer and then the version
-// file that the pointer names, only when the version changed. Without the
-// pointer, or when the pointer fails, it reads the dataset URL with an
-// ETag.
+// Refresh reads the pointer file (card.LatestPath) at the loader URL, and
+// then the version file that the pointer names when the version changed. On
+// an error it keeps the last good dataset.
 func (l *Loader) Refresh(ctx context.Context) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if p := pointerURL(l.URL); p != "" {
-		err := l.refreshPointer(ctx, p)
-		if err == nil || p == l.URL {
-			return err
-		}
-
-		l.Log.Warn("read the dataset pointer; reading the dataset file", "error", err)
-	}
-
-	ds, etag, err := l.get(ctx, l.URL, l.etag)
-	if err != nil || ds == nil {
-		return err
-	}
-
-	l.etag = etag
-
-	return l.store(ds)
-}
-
-// refreshPointer reads the pointer file and, when it names a new version,
-// the version file.
-func (l *Loader) refreshPointer(ctx context.Context, url string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := l.HTTP.Do(req)
-	if err != nil {
-		return fmt.Errorf("get the dataset pointer: %w", err)
-	}
-	defer l.close(resp)
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("get the dataset pointer: %s", resp.Status)
-	}
-
 	var latest card.Latest
-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxPointer)).Decode(&latest); err != nil {
-		return fmt.Errorf("read the dataset pointer: %w", err)
+	if err := l.getJSON(ctx, l.URL, maxPointer, &latest); err != nil {
+		return fmt.Errorf("the dataset pointer: %w", err)
 	}
 
 	if latest.Version == "" || latest.URL == "" {
@@ -195,55 +140,44 @@ func (l *Loader) refreshPointer(ctx context.Context, url string) error {
 		return nil
 	}
 
-	ds, _, err := l.get(ctx, latest.URL, "")
-	if err != nil {
-		return err
+	var ds card.Dataset
+	if err := l.getJSON(ctx, latest.URL, maxDataset, &ds); err != nil {
+		return fmt.Errorf("the dataset %s: %w", latest.Version, err)
 	}
 
-	return l.store(ds)
+	return l.store(&ds)
 }
 
 // maxPointer is the largest pointer file that the loader reads.
 const maxPointer = 64 << 10
 
-// get reads a dataset. It returns nil and no error when the ETag still
-// matches.
-func (l *Loader) get(ctx context.Context, url, etag string) (*card.Dataset, string, error) {
+// getJSON reads a JSON file of at most limit bytes into v. A 404 before the
+// first good dataset marks the dataset as missing.
+func (l *Loader) getJSON(ctx context.Context, url string, limit int64, v any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, "", err
-	}
-
-	if etag != "" {
-		req.Header.Set("If-None-Match", etag)
+		return err
 	}
 
 	resp, err := l.HTTP.Do(req)
 	if err != nil {
-		return nil, "", fmt.Errorf("get the dataset: %w", err)
+		return err
 	}
 	defer l.close(resp)
 
 	switch resp.StatusCode {
-	case http.StatusNotModified:
-		return nil, etag, nil
+	case http.StatusOK:
 	case http.StatusNotFound:
 		if l.version == "" {
 			l.missing.Store(true)
 		}
 
-		return nil, "", errNotFound
-	case http.StatusOK:
+		return errNotFound
 	default:
-		return nil, "", fmt.Errorf("get the dataset: %s", resp.Status)
+		return errors.New(resp.Status)
 	}
 
-	var ds card.Dataset
-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxDataset)).Decode(&ds); err != nil {
-		return nil, "", fmt.Errorf("read the dataset: %w", err)
-	}
-
-	return &ds, resp.Header.Get("ETag"), nil
+	return json.NewDecoder(io.LimitReader(resp.Body, limit)).Decode(v)
 }
 
 // store indexes a dataset and makes it the current one.

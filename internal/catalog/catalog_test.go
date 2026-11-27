@@ -29,45 +29,57 @@ func TestImageURL(t *testing.T) {
 	}
 }
 
-// fakeBucket serves a dataset with an ETag. status, when set, replaces the
-// response.
+// fakeBucket serves the pointer file data/latest.json and the version file
+// that it names. status, when set, replaces the pointer response.
 type fakeBucket struct {
-	ds     *card.Dataset
-	status atomic.Int32
-	gets   atomic.Int32
+	srv         *httptest.Server
+	ds          atomic.Pointer[card.Dataset]
+	status      atomic.Int32
+	versionGets atomic.Int32
 }
 
-func (b *fakeBucket) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	b.gets.Add(1)
+func newFakeBucket(t *testing.T, ds *card.Dataset) *fakeBucket {
+	t.Helper()
 
-	if s := b.status.Load(); s != 0 {
-		w.WriteHeader(int(s))
+	b := &fakeBucket{}
+	b.ds.Store(ds)
 
-		return
-	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/"+card.LatestPath, func(w http.ResponseWriter, _ *http.Request) {
+		if s := b.status.Load(); s != 0 {
+			w.WriteHeader(int(s))
 
-	etag := `"` + b.ds.Version + `"`
-	if r.Header.Get("If-None-Match") == etag {
-		w.WriteHeader(http.StatusNotModified)
+			return
+		}
 
-		return
-	}
+		v := b.ds.Load().Version
+		_ = json.NewEncoder(w).
+			Encode(card.Latest{Version: v, URL: b.srv.URL + "/" + card.VersionPath(v)})
+	})
+	mux.HandleFunc("/data/cards/", func(w http.ResponseWriter, _ *http.Request) {
+		b.versionGets.Add(1)
+		_ = json.NewEncoder(w).Encode(b.ds.Load())
+	})
 
-	w.Header().Set("ETag", etag)
-	_ = json.NewEncoder(w).Encode(b.ds)
+	b.srv = httptest.NewServer(mux)
+	t.Cleanup(b.srv.Close)
+
+	return b
 }
 
+func (b *fakeBucket) pointer() string { return b.srv.URL + "/" + card.LatestPath }
+
+// TestLoaderReadsAndKeepsTheDataset checks that the loader reads the version
+// file only for a new version, and keeps the last good dataset on an error.
 func TestLoaderReadsAndKeepsTheDataset(t *testing.T) {
 	ds, err := fixture.Dataset()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	b := &fakeBucket{ds: ds}
-	srv := httptest.NewServer(b)
-	defer srv.Close()
+	b := newFakeBucket(t, ds)
 
-	l, err := NewLoader(srv.URL, nil)
+	l, err := NewLoader(b.pointer(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,8 +98,9 @@ func TestLoaderReadsAndKeepsTheDataset(t *testing.T) {
 	}
 
 	first := l.Engine()
-	if err := l.Refresh(ctx); err != nil || l.Engine() != first {
-		t.Errorf("an unchanged dataset: err %v, engine replaced %t", err, l.Engine() != first)
+	if err := l.Refresh(ctx); err != nil || l.Engine() != first || b.versionGets.Load() != 1 {
+		t.Errorf("an unchanged version: err %v, engine replaced %t, %d version reads",
+			err, l.Engine() != first, b.versionGets.Load())
 	}
 
 	b.status.Store(http.StatusInternalServerError)
@@ -107,7 +120,7 @@ func TestLoaderReadsAndKeepsTheDataset(t *testing.T) {
 	}
 
 	b.status.Store(0)
-	b.ds = &card.Dataset{Version: "v2", Cards: ds.Cards[:3], Sets: ds.Sets}
+	b.ds.Store(&card.Dataset{Version: "v2", Cards: ds.Cards[:3], Sets: ds.Sets})
 
 	if err := l.Refresh(ctx); err != nil || l.Engine().Version() != "v2" || l.Engine().Len() != 3 {
 		t.Errorf(
@@ -120,13 +133,10 @@ func TestLoaderReadsAndKeepsTheDataset(t *testing.T) {
 }
 
 func TestLoaderMarksAMissingDataset(t *testing.T) {
-	b := &fakeBucket{}
+	b := newFakeBucket(t, &card.Dataset{})
 	b.status.Store(http.StatusNotFound)
 
-	srv := httptest.NewServer(b)
-	defer srv.Close()
-
-	l, err := NewLoader(srv.URL, nil)
+	l, err := NewLoader(b.pointer(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,79 +146,15 @@ func TestLoaderMarksAMissingDataset(t *testing.T) {
 	}
 }
 
-// TestLoaderReadsThePointer checks that a loader of data/cards.json reads
-// data/latest.json, reads the version file only for a new version, and
-// falls back to data/cards.json when the pointer fails.
-func TestLoaderReadsThePointer(t *testing.T) {
-	ds, err := fixture.Dataset()
+func TestLoaderRefusesAPointerWithoutAVersion(t *testing.T) {
+	b := newFakeBucket(t, &card.Dataset{})
+
+	l, err := NewLoader(b.pointer(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var pointerStatus, versionGets, fileGets atomic.Int32
-
-	version := atomic.Value{}
-	version.Store("fixture")
-
-	mux := http.NewServeMux()
-	srv := httptest.NewServer(mux)
-	defer srv.Close()
-
-	mux.HandleFunc("/"+card.LatestPath, func(w http.ResponseWriter, _ *http.Request) {
-		if s := pointerStatus.Load(); s != 0 {
-			w.WriteHeader(int(s))
-
-			return
-		}
-
-		v, _ := version.Load().(string)
-		_ = json.NewEncoder(w).
-			Encode(card.Latest{Version: v, URL: srv.URL + "/" + card.VersionPath(v)})
-	})
-	mux.HandleFunc("/data/cards/", func(w http.ResponseWriter, _ *http.Request) {
-		versionGets.Add(1)
-
-		d := *ds
-		d.Version, _ = version.Load().(string)
-		_ = json.NewEncoder(w).Encode(&d)
-	})
-	mux.HandleFunc("/"+card.DatasetPath, func(w http.ResponseWriter, _ *http.Request) {
-		fileGets.Add(1)
-
-		d := *ds
-		d.Version = "file"
-		_ = json.NewEncoder(w).Encode(&d)
-	})
-
-	l, err := NewLoader(srv.URL+"/"+card.DatasetPath, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ctx := context.Background()
-	for range 2 {
-		if err := l.Refresh(ctx); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if l.Engine().Version() != "fixture" || versionGets.Load() != 1 || fileGets.Load() != 0 {
-		t.Errorf("version %q, %d version reads, %d file reads",
-			l.Engine().Version(), versionGets.Load(), fileGets.Load())
-	}
-
-	version.Store("v2")
-
-	if err := l.Refresh(
-		ctx,
-	); err != nil || l.Engine().Version() != "v2" ||
-		versionGets.Load() != 2 {
-		t.Errorf("a new version: err %v, version %q", err, l.Engine().Version())
-	}
-
-	pointerStatus.Store(http.StatusNotFound)
-
-	if err := l.Refresh(ctx); err != nil || l.Engine().Version() != "file" {
-		t.Errorf("a failed pointer: err %v, version %q", err, l.Engine().Version())
+	if err := l.Refresh(context.Background()); err == nil || b.versionGets.Load() != 0 {
+		t.Errorf("err %v, %d version reads", err, b.versionGets.Load())
 	}
 }

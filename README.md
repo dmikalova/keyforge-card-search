@@ -32,5 +32,5 @@ Run it locally with `go run ./cmd/search` and open <http://localhost:8080>.
 Without `DATASET_URL`, it serves the hand-written fixture. With the real data:
 
 ```sh
-DATASET_URL=https://storage.googleapis.com/mklv-keyforge-cards-public/data/cards.json go run ./cmd/search
+DATASET_URL=https://storage.googleapis.com/mklv-keyforge-cards-public/data/latest.json go run ./cmd/search
 ```

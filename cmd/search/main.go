@@ -80,11 +80,10 @@ func run() error {
 	return nil
 }
 
-// source returns the dataset source. With DATASET_URL, it reads the dataset
-// and reads it again when it changes. For a URL of data/cards.json or
-// data/latest.json, it checks the small pointer data/latest.json and reads
-// the version file that it names (ADR 0007 in keyforge-data). Without
-// DATASET_URL, it uses the embedded fixture, for local work.
+// source returns the dataset source. DATASET_URL is the URL of the pointer
+// file data/latest.json. The loader checks the pointer and reads the version
+// file that it names when the version changes (ADR 0007 in keyforge-data).
+// Without DATASET_URL, it uses the embedded fixture, for local work.
 func source(ctx context.Context, log *slog.Logger) (catalog.Source, error) {
 	url := os.Getenv("DATASET_URL")
 	if url == "" {

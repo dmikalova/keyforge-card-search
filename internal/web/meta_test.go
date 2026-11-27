@@ -33,7 +33,7 @@ func TestCardMeta(t *testing.T) {
 	)
 	m := CardMeta(v, c)
 
-	want := "Brobnar · Creature · Power 8 · Armor 0\nReap: Troll heals 3 damage.\ntide Raise the tide.\nDon’t feed it."
+	want := "Brobnar · Creature · P 8\nReap: Troll heals 3 damage.\ntide Raise the tide."
 	if m.Title != "Troll" || m.Description != want ||
 		!strings.HasSuffix(m.Image, "callofthearchons/048.webp") {
 		t.Errorf("CardMeta = %+v", m)
@@ -64,5 +64,26 @@ func TestCardNotes(t *testing.T) {
 
 	if m := CardMeta(v, c); !strings.HasSuffix(m.Description, "\nAlways 3+ copies") {
 		t.Errorf("description = %q", m.Description)
+	}
+}
+
+// TestCardMetaStats checks the stats of the link preview: X power, armor
+// above 0, and no stats on a card without power.
+func TestCardMetaStats(t *testing.T) {
+	for _, c := range []struct {
+		card card.Card
+		want string
+	}{
+		{card.Card{House: "sanctum", Type: "creature", Power: &card.Power{N: 5}, Armor: 1}, "Sanctum · Creature · P 5 · A 1"},
+		{card.Card{House: "logos", Type: "creature", Power: &card.Power{X: true}}, "Logos · Creature · P X"},
+		{card.Card{House: "dis", Type: "action"}, "Dis · Action"},
+	} {
+		c.card.Printings = []card.Printing{{Set: "callofthearchons", Number: "001"}}
+		v := NewCardView(&c.card, 0, nil, func(s string) string { return s },
+			func(string) *card.Card { return nil })
+
+		if got := CardMeta(v, &c.card).Description; got != c.want {
+			t.Errorf("description = %q, want %q", got, c.want)
+		}
 	}
 }

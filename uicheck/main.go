@@ -368,7 +368,7 @@ func (c *checker) cardPage() {
 	)
 	tags := []string{
 		`property="og:title" content="Troll"`,
-		`property="og:description" content="`,
+		`property="og:description" content="Brobnar · Creature · P 8`,
 		"Reap:",
 	}
 	// A printing with an image gives the preview image.
@@ -385,6 +385,14 @@ func (c *checker) cardPage() {
 	for _, tag := range tags {
 		c.expect("card page has "+tag, strings.Contains(html, tag), id)
 	}
+
+	// The preview has no flavor text. The card view on the page has it.
+	desc := html
+	if _, after, ok := strings.Cut(html, `property="og:description" content="`); ok {
+		desc, _, _ = strings.Cut(after, `"`)
+	}
+
+	c.expect("the preview has no flavor text", !strings.Contains(desc, "feed it"), desc)
 
 	c.open("/card/" + id)
 	u := c.eval(`location.pathname + location.search`)

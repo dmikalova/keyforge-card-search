@@ -770,11 +770,16 @@ type PageMeta struct {
 
 // CardMeta returns the link preview of a card: the name, the card image of
 // the shown printing, and readable text: house, type, and stats, then the
-// card text, then the flavor text.
+// card text. Power shows as "P 5" (or "P X"), and armor as "A 1" only when
+// it is above 0. The preview has no flavor text.
 func CardMeta(v CardView, c *card.Card) PageMeta {
 	head := []string{v.House.Value, v.Type.Value}
-	for _, f := range v.Stats {
-		head = append(head, f.Label+" "+f.Value)
+	if c.Power != nil {
+		head = append(head, "P "+c.Power.String())
+	}
+
+	if c.Armor > 0 {
+		head = append(head, "A "+strconv.Itoa(c.Armor))
 	}
 
 	lines := []string{strings.Join(head, " · ")}
@@ -787,12 +792,6 @@ func CardMeta(v CardView, c *card.Card) PageMeta {
 
 	if notes := strings.Join(v.Notes, " · "); notes != "" && len(notes) <= maxMetaNotes {
 		lines = append(lines, notes)
-	}
-
-	if v.Print >= 0 && v.Print < len(c.Printings) {
-		if f := strings.TrimSpace(c.Printings[v.Print].Flavor); f != "" {
-			lines = append(lines, f)
-		}
 	}
 
 	return PageMeta{
