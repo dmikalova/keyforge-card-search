@@ -76,8 +76,10 @@ type FacetLink struct {
 // Results is the part of the search page that a new query replaces: the
 // count, the facets, and the first tiles, or the parse error.
 type Results struct {
-	Err    *ErrorView
-	Count  int
+	Err   *ErrorView
+	Count int
+	// Total is the number of results before limit:N.
+	Total  int
 	Facets []FacetGroup
 	Tiles  []Tile
 	// Next is the URL of the next batch, or empty.
@@ -316,6 +318,9 @@ type PrintView struct {
 	Set Field
 	// Text is the card text of the printing, one line in each element.
 	Text [][]TextPart
+	// HouseIcon is the house of a printing in another house than the card
+	// (Redemption), or the zero Icon.
+	HouseIcon Icon
 	// Changed reports whether the printing has its own text: Master Vault
 	// changed the text of another printing (card.Printing.Text).
 	Changed bool
@@ -442,6 +447,11 @@ func NewCardView(
 		if p.Text != "" {
 			v.Sets[i].Text = textLines(p.Text, c)
 			v.Sets[i].Diff = DiffParts(search.PlainText(p.Text), search.PlainText(c.Text))
+		}
+
+		if p.House != "" {
+			v.Sets[i].HouseIcon = HouseIcon(p.House, labels.House(p.House))
+			v.Sets[i].Name += " · " + labels.House(p.House)
 		}
 
 		if p.Artist != "" {
@@ -685,6 +695,12 @@ func rarityLabel(r string) string {
 // thumb returns the image URL of a card's default printing: the newest
 // printing that is not an anomaly, or the newest printing.
 func thumb(c *card.Card) string {
+	for _, p := range slices.Backward(c.Printings) {
+		if !p.Anomaly && p.House == "" && p.Image != "" {
+			return catalog.ImageURL(p.Image)
+		}
+	}
+
 	for _, p := range slices.Backward(c.Printings) {
 		if !p.Anomaly && p.Image != "" {
 			return catalog.ImageURL(p.Image)

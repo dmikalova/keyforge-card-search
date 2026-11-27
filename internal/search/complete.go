@@ -129,6 +129,7 @@ var fieldDocs = map[string]string{
 	DirOrder:          "Order: asc or desc",
 	DirUnique:         "unique:prints shows each printing",
 	DirSeed:           "Seed of sort:random",
+	DirLimit:          "Show the first N results: limit:10",
 }
 
 // numericKeys returns the keys of a keyed field that take a number: the

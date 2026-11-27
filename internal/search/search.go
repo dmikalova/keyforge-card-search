@@ -39,6 +39,9 @@ type Result struct {
 	Items []Item
 	// Facets count the results.
 	Facets Facets
+	// Total is the number of results before limit:N. It equals len(Items)
+	// without limit.
+	Total int
 }
 
 // ErrNoSeed is the error of Search for "sort:random" without "seed:". The
@@ -153,6 +156,10 @@ func (e *Engine) Parse(src string) (*query.Query, error) {
 		return nil, err
 	}
 
+	if _, err := limitOf(q); err != nil {
+		return nil, err
+	}
+
 	return q, nil
 }
 
@@ -181,7 +188,18 @@ func (e *Engine) Search(src string) (*Result, error) {
 		return nil, err
 	}
 
-	return &Result{Query: q, Items: items, Facets: e.count(items, prints)}, nil
+	// limit:N keeps the first N results after the sort, so sort:random
+	// limit:10 shows 10 random cards. The facets count the whole result
+	// before the limit: a facet count is then the total that a click on the
+	// value finds.
+	facets := e.count(items, prints)
+	total := len(items)
+
+	if n, _ := limitOf(q); n > 0 && n < len(items) {
+		items = items[:n]
+	}
+
+	return &Result{Query: q, Items: items, Facets: facets, Total: total}, nil
 }
 
 // shown returns the results of a matched card. The candidates are the
@@ -240,8 +258,14 @@ func (e *Engine) item(c *card.Card, p *card.Printing) Item {
 	return Item{Card: c, Printing: p, Set: s, SetIndex: i}
 }
 
-// better reports whether a is a better default printing than b.
+// better reports whether a is a better default printing than b: a printing
+// in the card's own house before one in another house (Redemption), a
+// printing that is not an anomaly before one that is, then the newest set.
 func (e *Engine) better(a, b *card.Printing) bool {
+	if (a.House == "") != (b.House == "") {
+		return a.House == ""
+	}
+
 	if a.Anomaly != b.Anomaly {
 		return !a.Anomaly
 	}
@@ -598,4 +622,28 @@ func (e *Engine) SetOf(slug string) (sets.Set, bool) {
 	}
 
 	return e.sets[i], true
+}
+
+// maxLimit is the largest limit:N.
+const maxLimit = 100000
+
+// limitOf returns N of a limit:N directive, or 0 without one. N must be a
+// whole number from 1.
+func limitOf(q *query.Query) (int, error) {
+	for _, d := range slices.Backward(q.Directives) {
+		if d.Name != DirLimit {
+			continue
+		}
+
+		n, err := strconv.Atoi(d.Value)
+		if err != nil || n < 1 || n > maxLimit {
+			return 0, &query.Error{
+				Pos: d.Pos, Msg: "limit takes a whole number from 1, for example limit:10",
+			}
+		}
+
+		return n, nil
+	}
+
+	return 0, nil
 }

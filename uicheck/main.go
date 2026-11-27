@@ -73,7 +73,7 @@ func run(base, out string, w width) bool {
 	ctx, cancel := chromedp.NewContext(actx)
 	defer cancel()
 
-	ctx, cancel = context.WithTimeout(ctx, 6*time.Minute)
+	ctx, cancel = context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 
 	c := &checker{ctx: ctx, base: base, out: out, w: w}
@@ -105,6 +105,8 @@ func run(base, out string, w width) bool {
 	c.flagsAndChips()
 	c.activeHighlight()
 	c.typeOrder()
+	c.limit()
+	c.redemption()
 	c.cardFilters()
 	c.textChanges()
 	c.cardPage()
@@ -512,10 +514,20 @@ func (c *checker) sliderKeepsItsPlace() {
 	c.expect("slider keeps its place after a search", before == after, before+" then "+after)
 }
 
-// count returns the result count of the page.
+// count returns the total of the results: the number before limit:N, so
+// "10 of 2,457" is 2457.
 func (c *checker) count() int {
-	return atoi(strings.ReplaceAll(
-		c.eval(`document.querySelector('.count strong')?.innerText || ''`), ",", ""))
+	s := c.eval(`document.querySelector('.count')?.innerText || ''`)
+	f := strings.Fields(strings.ReplaceAll(s, ",", ""))
+	n := 0
+
+	for _, w := range f {
+		if v := atoi(w); v > 0 {
+			n = v
+		}
+	}
+
+	return n
 }
 
 // facetRow returns the label and count of the first row of a facet that the
@@ -536,23 +548,35 @@ func (c *checker) facetRow(name string) (string, int) {
 // facetCountsMatch checks that a facet count is the number of results that
 // a click on the value finds.
 func (c *checker) facetCountsMatch() {
-	for _, name := range []string{"rarity", "set", "flags", "type"} {
-		c.search("")
+	facets := []string{
+		"house", "type", "rarity", "set", "keyword", "ability", "trait", "artist", "flags",
+		"power",
+	}
 
-		label, n := c.facetRow(name)
-		if label == "" {
-			c.fail("facet "+name, "no row")
-			continue
+	// A query whose value the data does not have gives an error page with
+	// no facets, so its rows are skipped.
+	for _, q := range []string{
+		"", "type:reference", "h:redemption", "s:wc", "is:anomaly", "r:anomaly",
+		"is:eviltwin", "k:assault", "-h:dis", "-h:brobnar,logos t:creature",
+		"sort:random limit:10",
+	} {
+		for _, name := range facets {
+			c.search(q)
+
+			label, n := c.facetRow(name)
+			if label == "" {
+				continue
+			}
+
+			c.jsClick(`.facet a[data-check="1"]`)
+			c.wait(1200 * time.Millisecond)
+			got := c.count()
+			c.expect(
+				fmt.Sprintf("%q: %s %s count matches its click", q, name, label),
+				got == n,
+				fmt.Sprintf("facet %d, results %d", n, got),
+			)
 		}
-
-		c.jsClick(`.facet a[data-check="1"]`)
-		c.wait(1200 * time.Millisecond)
-		got := c.count()
-		c.expect(
-			fmt.Sprintf("%s %s count matches its click", name, label),
-			got == n,
-			fmt.Sprintf("facet %d, results %d", n, got),
-		)
 	}
 }
 
@@ -625,6 +649,7 @@ func (c *checker) activeHighlight() {
 	got = c.activeRow("house") + " " + c.activeRow("type")
 	c.expect("highlight after typing", got == "Dis|x|filled Creature|x|filled", got)
 
+	c.search("")
 	label, _ := c.facetRow("flags")
 	c.jsClick(`.facet a[data-check="1"]`)
 	c.wait(1200 * time.Millisecond)
@@ -641,4 +666,31 @@ func (c *checker) typeOrder() {
 	)
 	c.expect("reference is the last type",
 		!strings.Contains(types, "Reference") || strings.HasSuffix(types, "Reference"), types)
+}
+
+// limit checks limit:N: N tiles, and the count shows N of the total.
+func (c *checker) limit() {
+	c.search("sort:random limit:10")
+	count := c.eval(`document.querySelector('.count')?.innerText.replace(/\s+/g, ' ').trim() || ''`)
+	tiles := c.eval(`String(document.querySelectorAll('.grid .tile').length)`)
+	c.expect("limit:10 shows 10 of the total",
+		strings.HasPrefix(count, "10 of ") && tiles == "10", count+", "+tiles+" tiles")
+}
+
+// redemption checks a Redemption printing: h:redemption shows it, and its
+// set chip has the Redemption icon. The fixture has no Redemption printing.
+func (c *checker) redemption() {
+	c.search("h:redemption is:reprint")
+	if c.eval(`String(document.querySelectorAll('.grid .tile').length)`) == "0" {
+		fmt.Printf("SKIP %s redemption: no Redemption printings in the data\n", c.w.name)
+
+		return
+	}
+
+	c.click(".grid .tile")
+	icons := c.eval(
+		`[...document.querySelectorAll('#zoom .printing')].map(b => b.querySelectorAll('.ico').length + ':' + b.title).join(' | ')`,
+	)
+	c.expect("a Redemption chip has the house icon", strings.Contains(icons, "Redemption"), icons)
+	c.shot("redemption")
 }

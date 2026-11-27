@@ -6,7 +6,7 @@ toolchain go1.27.4
 
 require (
 	github.com/a-h/templ v0.3.1118
-	github.com/dmikalova/keyforge-data v1.24.0
+	github.com/dmikalova/keyforge-data v1.25.0
 	github.com/dmikalova/project-standards v1.37.0
 	github.com/dop251/goja v0.0.0-20261125210501-5e92a7e24d0c
 	github.com/magefile/mage v1.17.2

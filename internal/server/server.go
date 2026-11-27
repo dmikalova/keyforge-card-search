@@ -162,6 +162,7 @@ func (s *Server) results(q string, res *search.Result, err error, at int) web.Re
 
 	return web.Results{
 		Count:  len(res.Items),
+		Total:  res.Total,
 		Facets: web.NewFacets(s.src.Engine(), q, res.Facets),
 		Tiles:  web.NewTiles(first, 0),
 		Next:   web.BatchURL(q, len(first), len(res.Items)),
@@ -285,11 +286,16 @@ type exportPrinting struct {
 	Image   string `json:"image,omitempty"`
 	Flavor  string `json:"flavor,omitempty"`
 	Artist  string `json:"artist,omitempty"`
+	// House is the house of a printing in another house than the card
+	// (Redemption).
+	House string `json:"house,omitempty"`
 }
 
 type exportResult struct {
-	Query string       `json:"query"`
-	Count int          `json:"count"`
+	Query string `json:"query"`
+	Count int    `json:"count"`
+	// Total is the number of results before limit:N.
+	Total int          `json:"total"`
 	Cards []exportCard `json:"cards"`
 }
 
@@ -302,6 +308,7 @@ func toExport(p *card.Printing) exportPrinting {
 		Image:   catalog.ImageURL(p.Image),
 		Flavor:  p.Flavor,
 		Artist:  p.Artist,
+		House:   p.House,
 	}
 }
 
@@ -322,7 +329,10 @@ func (s *Server) export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out := exportResult{Query: q, Count: len(res.Items), Cards: make([]exportCard, len(res.Items))}
+	out := exportResult{
+		Query: q, Count: len(res.Items), Total: res.Total,
+		Cards: make([]exportCard, len(res.Items)),
+	}
 
 	for i, it := range res.Items {
 		c := it.Card
@@ -381,6 +391,14 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 // defaultPrint returns the index of a card's default printing: the newest
 // printing that is not an anomaly, or the newest printing.
 func defaultPrint(c *card.Card) int {
+	// A printing in the card's own house comes first: a Redemption printing
+	// shows only when the query selects it.
+	for i, v := range slices.Backward(c.Printings) {
+		if !v.Anomaly && v.House == "" {
+			return i
+		}
+	}
+
 	for i, v := range slices.Backward(c.Printings) {
 		if !v.Anomaly {
 			return i

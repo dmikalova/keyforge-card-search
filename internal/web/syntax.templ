@@ -66,7 +66,7 @@ templ SyntaxContent() {
 				aember, enhance, artist (printings without an artist last). Each key sorts the ties of the keys before it. A minus sign makes one key
 				descending: <a href={ templ.SafeURL(SearchURL("sort:set,-power,name")) }><code>sort:set,-power,name</code></a>.
 				<code>sort:random</code> shuffles the results, alone. <code>seed:</code> fixes the random order.
-				<code>order:desc</code> reverses the whole order. <code>unique:prints</code> shows each printing.
+				<code>order:desc</code> reverses the whole order. <code>unique:prints</code> shows each printing. <code>limit:10</code> shows the first 10 results after the sort: <code>sort:random limit:10</code> shows 10 random cards, and the seed keeps the same 10 on a reload. The count then shows 10 of the total, and the side panel counts the whole result before the limit.
 				Without a <code>sort:</code>, a query with a name or a bare word sorts by the best name match:
 				the whole name, then the start of the name, then the start of a word, then the rest.
 				The sort by house puts the cards without a house last, in groups: anomalies, the

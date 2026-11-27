@@ -41,7 +41,13 @@ templ ResultsView(r Results) {
 			<div class="layout">
 				<aside class="facets">
 					<div class="summary">
-						<p class="count"><strong>{ commas(r.Count) }</strong> { plural(r.Count, "card", "cards") }</p>
+						<p class="count">
+							<strong>{ commas(r.Count) }</strong>
+							if r.Total > r.Count {
+								of { commas(r.Total) }
+							}
+							{ plural(max(r.Count, r.Total), "card", "cards") }
+						</p>
 						<label class="size">
 							Size
 							<input id="size" type="range" min={ itoa(SizeMin) } max={ itoa(SizeMax) } step={ itoa(SizeStep) } value={ itoa(SizeDefault) } aria-label="Card size"/>
@@ -204,6 +210,9 @@ templ Zoom(v CardView) {
 							<button type="button" class={ "printing", templ.KV("active", p.Index == v.Print) } data-img={ p.Image } data-print={ itoa(p.Index) } title={ p.Name }>
 								@icon(p.SetIcon)
 								<span>{ p.Label }</span>
+								if p.HouseIcon.URL != "" {
+									@icon(p.HouseIcon)
+								}
 								if p.Changed {
 									@textChangedIcon()
 								}
@@ -355,6 +364,9 @@ templ allSets(v CardView) {
 				<figcaption>
 					@icon(p.SetIcon)
 					<span title={ p.Name }>{ p.Label }</span>
+					if p.HouseIcon.URL != "" {
+						@icon(p.HouseIcon)
+					}
 					if p.Changed {
 						@textChangedIcon()
 					}

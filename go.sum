@@ -19,8 +19,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dlclark/regexp2/v2 v2.11.0 h1:z5uRPHav+eTVpoffDSuUP2KPS4f1ONZaPDK73S8HA0w=
 github.com/dlclark/regexp2/v2 v2.11.0/go.mod h1:avUrQvPaLz2DrFNHJF0taWAFFX2C1GMSSoeiqFjcBmU=
-github.com/dmikalova/keyforge-data v1.24.0 h1:nObuLdCxUrLuHYamd7Hrxb9PMMYRhT/ylo2KYep6ivY=
-github.com/dmikalova/keyforge-data v1.24.0/go.mod h1:TME8OeD0HtlEx5CK6IfjDW4dIHcOWc2C0eDxj1QwhNM=
+github.com/dmikalova/keyforge-data v1.25.0 h1:06s1BOkqLJqte6UjwXEZ28LIZ2be8zU5pxhPBkvlRm8=
+github.com/dmikalova/keyforge-data v1.25.0/go.mod h1:TME8OeD0HtlEx5CK6IfjDW4dIHcOWc2C0eDxj1QwhNM=
 github.com/dmikalova/project-standards v1.37.0 h1:ChCBRmjVGigh+XEhnrBfmyXOWgdih2ifdxxnvptxC2Q=
 github.com/dmikalova/project-standards v1.37.0/go.mod h1:vMyQZMZJDOLqw0CEPeE9aixdLzWmxB+GxGxPmtr/70s=
 github.com/dop251/goja v0.0.0-20261125210501-5e92a7e24d0c h1:DrPWTQKJbBWxW/xaQcnUMPtoYScy0n7bkJR3ONvcIBA=

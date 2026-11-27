@@ -108,8 +108,18 @@ func TestArtistFacetAndSort(t *testing.T) {
 		t.Errorf("sort:artist last = %q, want no artist", last)
 	}
 
-	if len(r.Facets.Artists) != 3 || r.Facets.Artists[0].Field != FieldArtist {
+	// Three artists, then the printings without an artist, last.
+	if a := r.Facets.Artists; len(a) != 4 || a[0].Field != FieldArtist ||
+		a[3].Value != ArtistNone || a[3].Label != "(no artist)" || a[3].Term != "art:none" {
 		t.Errorf("artist facet = %+v", r.Facets.Artists)
+	}
+
+	if s, _ := e.Filters("art:none").State(FieldArtist, ArtistNone); s != StateActive {
+		t.Errorf("art:none does not mark the row without an artist")
+	}
+
+	if s, _ := e.Filters("art:none").State(FieldArtist, "Leone Bonelli"); s != StateNone {
+		t.Errorf("art:none marks Leone Bonelli")
 	}
 
 	f := e.Filters(`art:"fabio perez"`)

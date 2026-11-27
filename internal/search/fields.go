@@ -24,7 +24,9 @@ type Entry struct {
 }
 
 // printingFields are the fields that test a printing, not the card.
-var printingFields = []string{"set", "rarity", query.NumberField, "flavor", FieldArtist}
+var printingFields = []string{
+	"set", "rarity", query.NumberField, "flavor", FieldArtist, "house",
+}
 
 // printingFlags are the flags that test a printing, not the card.
 var printingFlags = []string{FlagAnomaly, FlagReprint, FlagChanged}
@@ -50,6 +52,8 @@ const (
 	DirOrder  = "order"
 	DirUnique = "unique"
 	DirSeed   = "seed"
+	// DirLimit caps the number of results: sort:random limit:10.
+	DirLimit = "limit"
 )
 
 // The sort keys of the sort directive.
@@ -75,6 +79,7 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 
 		for _, p := range c.Printings {
 			rarities = appendNew(rarities, p.Rarity)
+			houses = appendNew(houses, p.House)
 		}
 	}
 
@@ -109,8 +114,14 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 			},
 		},
 		{
+			// A printing in another house (Redemption) has its own house, so
+			// h:redemption finds the card and shows that printing.
 			Name: "house", Alias: "h", Kind: query.KindEnum, Values: houses,
-			Strings: func(en *Entry) []string { return []string{HouseOf(en.Card)} },
+			Strings: func(en *Entry) []string {
+				return each(en, func(p *card.Printing) []string {
+					return []string{PrintHouse(en.Card, p)}
+				})
+			},
 		},
 		{
 			// group is the sort group of a card without a house (GroupOf). A
@@ -209,6 +220,7 @@ func (e *Engine) fields(cards []card.Card) []query.Field[*Entry] {
 		{Name: DirOrder, Kind: query.KindDirective, Values: []string{"asc", "desc"}},
 		{Name: DirUnique, Kind: query.KindDirective, Values: []string{"prints"}},
 		{Name: DirSeed, Kind: query.KindDirective},
+		{Name: DirLimit, Kind: query.KindDirective},
 	}
 }
 
@@ -335,3 +347,13 @@ func searchText(s string) string {
 // PlainText returns card text with the icon tokens as words, for text that
 // has no icons, such as a link preview: "{tide}" becomes "tide".
 func PlainText(s string) string { return searchText(s) }
+
+// PrintHouse returns the house of a printing: its own house (Redemption), or
+// the card's house, or HouseNone.
+func PrintHouse(c *card.Card, p *card.Printing) string {
+	if p.House != "" {
+		return p.House
+	}
+
+	return HouseOf(c)
+}

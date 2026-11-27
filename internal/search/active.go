@@ -185,6 +185,12 @@ func (e *Engine) matchFacet(t *query.Term, field, value string) bool {
 	case field == "set":
 		return e.setCode(t.Value.Text) == e.setCode(value)
 	case field == "artist":
+		// artist:none marks only the row of the printings without an
+		// artist, and that row only takes artist:none.
+		if value == ArtistNone || query.Fold(t.Value.Text) == ArtistNone {
+			return value == ArtistNone && query.Fold(t.Value.Text) == ArtistNone
+		}
+
 		// An artist term matches part of the name, so it marks each artist
 		// whose name has it: art:fabio marks Fábio Perez.
 		return t.Op == query.OpHas && strings.Contains(query.Fold(value), query.Fold(t.Value.Text))
@@ -372,6 +378,8 @@ func (e *Engine) facetLabel(field, value string) string {
 		return e.labels.Ability(value)
 	case "trait":
 		return traitLabel(value)
+	case "artist":
+		return artistLabel(value)
 	case "is":
 		return e.labels.Flag(value)
 	}

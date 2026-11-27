@@ -65,9 +65,9 @@ func newTally() *tally {
 	}
 }
 
-// card counts the printing values of a card one time: each set, artist, and
-// flag that one of its printings has, and each rarity if rarities is true.
-func (t *tally) card(e *Engine, c *card.Card, rarities bool) {
+// card counts the printing values of a card one time: each set, artist,
+// rarity, house, and flag that one of its printings has.
+func (t *tally) card(e *Engine, c *card.Card) {
 	for _, code := range e.setCodes(c) {
 		t.sets[code]++
 	}
@@ -76,10 +76,18 @@ func (t *tally) card(e *Engine, c *card.Card, rarities bool) {
 		t.artists[a]++
 	}
 
-	if rarities {
-		for _, r := range cardRarities(c) {
-			t.rarities[r]++
-		}
+	// artist:none matches a card with a printing without an artist, so the
+	// artist counts add up while some sets have no artists yet.
+	if slices.ContainsFunc(c.Printings, func(p card.Printing) bool { return p.Artist == "" }) {
+		t.artists[ArtistNone]++
+	}
+
+	for _, r := range cardRarities(c) {
+		t.rarities[r]++
+	}
+
+	for _, h := range cardHouses(c) {
+		t.houses[h]++
 	}
 
 	// A flag term matches a card if one of its printings has the flag.
@@ -90,10 +98,35 @@ func (t *tally) card(e *Engine, c *card.Card, rarities bool) {
 	}
 }
 
+// printing counts the printing values of one result of unique:prints: its
+// set, artist, rarity, house, and flags.
+func (t *tally) printing(e *Engine, it Item) {
+	p := it.Printing
+	t.sets[it.Set.Code]++
+	t.rarities[p.Rarity]++
+	t.houses[PrintHouse(it.Card, p)]++
+
+	if p.Artist == "" {
+		t.artists[ArtistNone]++
+	} else {
+		t.artists[p.Artist]++
+	}
+
+	one := &Entry{
+		Card:      it.Card,
+		Printings: []*card.Printing{p},
+		FirstSet:  e.entryOf[it.Card].FirstSet,
+	}
+	for _, fl := range e.flagTests {
+		if fl.Test(one) {
+			t.flags[fl.Name]++
+		}
+	}
+}
+
 // item counts the card values of one result.
 func (t *tally) item(it Item) {
 	c := it.Card
-	t.houses[houseBucket(c)]++
 	t.types[c.Type]++
 
 	for k := range c.Keywords {
@@ -120,23 +153,29 @@ func (t *tally) item(it Item) {
 // results that a click on the value finds. A printing term (set, rarity,
 // artist, a printing flag) matches a card if one of its printings matches,
 // so the printing facets count each card one time for each value that one
-// of its printings has. With unique:prints each result is a printing, so
-// the rarity facet counts each result by its own printing.
+// of its printings has. The house is a printing field too: a Redemption
+// printing has its own house. With unique:prints each result is a
+// printing, so the printing facets count each result by its own printing.
 func (e *Engine) count(items []Item, prints bool) Facets {
 	t := newTally()
 	counted := map[*card.Card]bool{}
 
 	for _, it := range items {
-		if !counted[it.Card] {
+		switch {
+		case prints:
+			t.printing(e, it)
+		case !counted[it.Card]:
 			counted[it.Card] = true
-			t.card(e, it.Card, !prints)
-		}
-
-		if prints {
-			t.rarities[it.Printing.Rarity]++
+			t.card(e, it.Card)
 		}
 
 		t.item(it)
+	}
+
+	// Without a named artist in the results, the artist facet has nothing
+	// to choose: it is hidden.
+	if len(t.artists) == 1 && t.artists[ArtistNone] > 0 {
+		clear(t.artists)
 	}
 
 	f := Facets{
@@ -166,12 +205,9 @@ func (e *Engine) count(items []Item, prints bool) Facets {
 		Abilities: counts(t.abilities, "ab", e.labels.Ability, byCount(t.abilities)),
 		Traits:    counts(t.traits, "tr", traitLabel, byCount(t.traits)),
 		Flags:     counts(t.flags, "is", e.labels.Flag, byCount(t.flags)),
-		Artists: counts(
-			t.artists,
-			"art",
-			func(s string) string { return s },
-			byCount(t.artists),
-		),
+		Artists: counts(t.artists, "art", artistLabel, func(a, b string) int {
+			return cmp.Or(compareBool(a == ArtistNone, b == ArtistNone), byCount(t.artists)(a, b))
+		}),
 	}
 
 	for _, cs := range [][]Count{f.Houses, f.Types, f.Rarities} {
@@ -354,4 +390,34 @@ func cardRarities(c *card.Card) []string {
 	}
 
 	return out
+}
+
+// cardHouses returns the houses of a card's printings, one time each: the
+// card's house, and the house of a printing in another house (Redemption).
+func cardHouses(c *card.Card) []string {
+	var out []string
+
+	for i := range c.Printings {
+		if h := PrintHouse(c, &c.Printings[i]); !slices.Contains(out, h) {
+			out = append(out, h)
+		}
+	}
+
+	if len(out) == 0 {
+		out = append(out, houseBucket(c))
+	}
+
+	return out
+}
+
+// artistNoneLabel is the facet label of the printings without an artist.
+const artistNoneLabel = "(no artist)"
+
+// artistLabel returns the facet label of an artist value.
+func artistLabel(a string) string {
+	if a == ArtistNone {
+		return artistNoneLabel
+	}
+
+	return a
 }
