@@ -433,6 +433,12 @@ func (c *checker) textChanges() {
 	c.click(".grid .tile")
 	c.expect("is:changed opens a card", c.zoomOpen(), "")
 
+	off := c.eval(
+		`(() => { const b = document.querySelector("#zoom .set-filter"); const p = b?.querySelector("path"); if (!p) return "none"; const r = b.getBoundingClientRect(), q = p.getBoundingClientRect(); return Math.max(Math.abs((r.left + r.right - q.left - q.right) / 2), Math.abs((r.top + r.bottom - q.top - q.bottom) / 2)).toFixed(2) })()`,
+	)
+	d, err := strconv.ParseFloat(off, 64)
+	c.expect("the set funnel is centered within 1px", err == nil && d <= 1, off)
+
 	icon := c.eval(`String(!!document.querySelector('#zoom .printing.active .text-changed'))`)
 	c.expect("the shown printing has the change icon", icon == "true", icon)
 

@@ -901,6 +901,8 @@ html:has(.syntax-modal:not([hidden])) {
   place-items: center;
   width: 1.6rem;
   height: 1.6rem;
+  padding: 0;
+  line-height: 0;
   border: 1px solid transparent;
   border-radius: 999px;
   background: none;
@@ -994,4 +996,9 @@ mark.diff {
   color: inherit;
   border-radius: 3px;
   padding: 0 0.1rem;
+}
+
+/* The funnel is a block, so no text baseline moves it off the center. */
+.set-filter svg {
+  display: block;
 }
