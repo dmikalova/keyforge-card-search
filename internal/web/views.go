@@ -324,6 +324,9 @@ type PrintView struct {
 	// Changed reports whether the printing has its own text: Master Vault
 	// changed the text of another printing (card.Printing.Text).
 	Changed bool
+	// ArtFrom is the set code of the printing whose image a maverick
+	// printing shows (card.Printing.Maverick), or "".
+	ArtFrom string
 	// Diff is the plain text of the printing with the words that differ
 	// from the card text marked, for the side-by-side view of all sets.
 	Diff [][]TextPart
@@ -452,6 +455,11 @@ func NewCardView(
 		if p.House != "" {
 			v.Sets[i].HouseIcon = HouseIcon(p.House, labels.House(p.House))
 			v.Sets[i].Name += " · " + labels.House(p.House)
+		}
+
+		if from := artFrom(c, p); from != "" {
+			v.Sets[i].ArtFrom, _ = setNames(from)
+			v.Sets[i].Name += " · Maverick: art from " + v.Sets[i].ArtFrom
 		}
 
 		if p.Artist != "" {
@@ -696,7 +704,7 @@ func rarityLabel(r string) string {
 // printing that is not an anomaly, or the newest printing.
 func thumb(c *card.Card) string {
 	for _, p := range slices.Backward(c.Printings) {
-		if !p.Anomaly && p.House == "" && p.Image != "" {
+		if !p.Anomaly && !p.Maverick && p.House == "" && p.Image != "" {
 			return catalog.ImageURL(p.Image)
 		}
 	}
@@ -843,4 +851,22 @@ func textLines(text string, c *card.Card) [][]TextPart {
 	}
 
 	return out
+}
+
+// artFrom returns the set of the printing whose image a maverick printing
+// shows: Master Vault has only maverick images of it, so keyforge-data
+// gives it the image of the card's newest normal printing. It returns "" for
+// a printing that is not a maverick or that keeps its own image.
+func artFrom(c *card.Card, p card.Printing) string {
+	if !p.Maverick || p.Image == "" {
+		return ""
+	}
+
+	for _, o := range slices.Backward(c.Printings) {
+		if !o.Maverick && o.Image == p.Image {
+			return o.Set
+		}
+	}
+
+	return ""
 }

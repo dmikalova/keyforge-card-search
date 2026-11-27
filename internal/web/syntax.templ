@@ -1,9 +1,10 @@
 package web
 
 // SyntaxPage explains the query language (ADR 0001). It is the full page
-// at /syntax, for links and for browsers without JavaScript.
-templ SyntaxPage() {
-	@page("Query syntax · KeyForge card gallery", "The query syntax of the KeyForge card gallery.", PageView{}, false) {
+// at /syntax, for links and for browsers without JavaScript. feedback shows
+// the feedback button, as on the search page.
+templ SyntaxPage(feedback bool) {
+	@page("Query syntax · KeyForge card gallery", "The query syntax of the KeyForge card gallery.", PageView{Feedback: feedback}, false) {
 		<main class="syntax">
 			@SyntaxContent()
 		</main>

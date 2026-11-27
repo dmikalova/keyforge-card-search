@@ -336,3 +336,37 @@ func TestFacetAudit(t *testing.T) {
 		checkFacetCounts(t, e, q, res.Facets)
 	}
 }
+
+// TestMaverickPrinting checks that a maverick printing is not the default
+// printing, even when it is the newest, and that a printing term still shows
+// it.
+func TestMaverickPrinting(t *testing.T) {
+	ds, err := fixture.Dataset()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &ds.Cards[0]
+	c.Printings = append(c.Printings, card.Printing{
+		Set: "menagerie", Number: "233", Rarity: "Rare", Maverick: true,
+	})
+	e, err := New(ds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shown := func(q string) *card.Printing {
+		t.Helper()
+		for _, it := range mustSearch(t, e, q).Items {
+			if it.Card.ID == c.ID {
+				return it.Printing
+			}
+		}
+		t.Fatalf("%q does not find %s", q, c.ID)
+		return nil
+	}
+	if p := shown(""); p.Maverick {
+		t.Errorf("default printing is the maverick printing %s %s", p.Set, p.Number)
+	}
+	if p := shown("#233"); !p.Maverick || p.Set != "menagerie" {
+		t.Errorf("#233 shows %s %s", p.Set, p.Number)
+	}
+}

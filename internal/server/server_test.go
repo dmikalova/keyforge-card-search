@@ -12,6 +12,7 @@ import (
 	"github.com/dmikalova/keyforge-data/card"
 
 	"github.com/dmikalova/gallery.keyforge.cards/internal/catalog"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/feedback"
 	"github.com/dmikalova/gallery.keyforge.cards/internal/fixture"
 )
 
@@ -239,3 +240,37 @@ func TestMissingDatasetShowsABanner(t *testing.T) {
 type missingSource struct{ *catalog.Static }
 
 func (missingSource) Missing() bool { return true }
+
+// TestSyntaxPageHasFeedback checks that the syntax page shows the feedback
+// button and form when feedback is on, as the search page does.
+func TestSyntaxPageHasFeedback(t *testing.T) {
+	ds, err := fixture.Dataset()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src, err := catalog.NewStatic(ds)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	on := New(src, nil).WithFeedback(feedback.New("https://discord.example/webhook", nil)).Handler()
+	for _, target := range []string{"/", "/syntax"} {
+		body := get(t, on, target).Body.String()
+		if !strings.Contains(body, `id="feedback"`) ||
+			!strings.Contains(body, `id="feedback-modal"`) {
+			t.Errorf("%s has no feedback button or form", target)
+		}
+	}
+
+	if body := get(
+		t,
+		handler(t),
+		"/syntax",
+	).Body.String(); strings.Contains(
+		body,
+		`id="feedback"`,
+	) {
+		t.Error("/syntax shows the feedback button with feedback off")
+	}
+}

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/dmikalova/keyforge-data/card"
@@ -82,5 +83,36 @@ func TestCardViewNamesFlagsAndSets(t *testing.T) {
 	if p := v.Sets[0]; p.Label != "WoE T01" || p.Name != "Winds of Exchange T01" ||
 		p.Set.Value != "Winds of Exchange" {
 		t.Errorf("set chip = %q / %q / %q", p.Label, p.Name, p.Set.Value)
+	}
+}
+
+// TestThumbSkipsMaverickPrintings checks that a related-card thumbnail is
+// the newest printing that is not a maverick.
+func TestThumbSkipsMaverickPrintings(t *testing.T) {
+	c := &card.Card{Printings: []card.Printing{
+		{Set: "grimreminders", Number: "155", Image: "grimreminders/155.webp"},
+		{Set: "menagerie", Number: "233", Image: "menagerie/233.webp", Maverick: true},
+	}}
+	if got := thumb(c); !strings.HasSuffix(got, "grimreminders/155.webp") {
+		t.Errorf("thumb = %q, want the Grim Reminders image", got)
+	}
+}
+
+// TestArtFrom checks the set that a maverick printing borrows its art from.
+func TestArtFrom(t *testing.T) {
+	c := &card.Card{Printings: []card.Printing{
+		{Set: "grimreminders", Image: "grimreminders/155.webp"},
+		{Set: "menagerie", Image: "grimreminders/155.webp", Maverick: true},
+		{Set: "vaultmasters2024", Image: "vaultmasters2024/229.webp", Maverick: true},
+	}}
+	if got := artFrom(c, c.Printings[1]); got != "grimreminders" {
+		t.Errorf("artFrom(menagerie) = %q, want grimreminders", got)
+	}
+	if got := artFrom(c, c.Printings[0]); got != "" {
+		t.Errorf("artFrom(a normal printing) = %q, want none", got)
+	}
+	// A maverick printing that keeps its own image borrows nothing.
+	if got := artFrom(c, c.Printings[2]); got != "" {
+		t.Errorf("artFrom(own image) = %q, want none", got)
 	}
 }

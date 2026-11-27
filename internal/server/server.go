@@ -62,7 +62,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /card", s.cardView)
 	mux.HandleFunc("GET /card/{id}", s.cardPage)
 	mux.HandleFunc("GET /syntax", func(w http.ResponseWriter, r *http.Request) {
-		s.render(w, r, web.SyntaxPage())
+		s.render(w, r, web.SyntaxPage(s.feedback.Enabled()))
 	})
 	// The syntax modal loads the same text from here.
 	mux.HandleFunc("GET /syntax/content", func(w http.ResponseWriter, r *http.Request) {
@@ -283,9 +283,12 @@ type exportPrinting struct {
 	Number  string `json:"number"`
 	Rarity  string `json:"rarity"`
 	Anomaly bool   `json:"anomaly,omitempty"`
-	Image   string `json:"image,omitempty"`
-	Flavor  string `json:"flavor,omitempty"`
-	Artist  string `json:"artist,omitempty"`
+	// Maverick is true for a printing that Master Vault has only as
+	// mavericks. Its image is the card's newest normal image.
+	Maverick bool   `json:"maverick,omitempty"`
+	Image    string `json:"image,omitempty"`
+	Flavor   string `json:"flavor,omitempty"`
+	Artist   string `json:"artist,omitempty"`
 	// House is the house of a printing in another house than the card
 	// (Redemption).
 	House string `json:"house,omitempty"`
@@ -301,14 +304,15 @@ type exportResult struct {
 
 func toExport(p *card.Printing) exportPrinting {
 	return exportPrinting{
-		Set:     p.Set,
-		Number:  p.Number,
-		Rarity:  p.Rarity,
-		Anomaly: p.Anomaly,
-		Image:   catalog.ImageURL(p.Image),
-		Flavor:  p.Flavor,
-		Artist:  p.Artist,
-		House:   p.House,
+		Set:      p.Set,
+		Number:   p.Number,
+		Rarity:   p.Rarity,
+		Anomaly:  p.Anomaly,
+		Maverick: p.Maverick,
+		Image:    catalog.ImageURL(p.Image),
+		Flavor:   p.Flavor,
+		Artist:   p.Artist,
+		House:    p.House,
 	}
 }
 

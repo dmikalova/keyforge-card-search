@@ -260,10 +260,15 @@ func (e *Engine) item(c *card.Card, p *card.Printing) Item {
 
 // better reports whether a is a better default printing than b: a printing
 // in the card's own house before one in another house (Redemption), a
-// printing that is not an anomaly before one that is, then the newest set.
+// printing that is not a maverick before one that is, a printing that is not
+// an anomaly before one that is, then the newest set.
 func (e *Engine) better(a, b *card.Printing) bool {
 	if (a.House == "") != (b.House == "") {
 		return a.House == ""
+	}
+
+	if a.Maverick != b.Maverick {
+		return !a.Maverick
 	}
 
 	if a.Anomaly != b.Anomaly {

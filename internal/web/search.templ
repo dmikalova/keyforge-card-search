@@ -213,6 +213,9 @@ templ Zoom(v CardView) {
 								if p.Changed {
 									@textChangedIcon()
 								}
+								if p.ArtFrom != "" {
+									@maverickNote(p.ArtFrom)
+								}
 							</button>
 							<button
 								type="button"
@@ -367,6 +370,9 @@ templ allSets(v CardView) {
 					if p.Changed {
 						@textChangedIcon()
 					}
+					if p.ArtFrom != "" {
+						@maverickNote(p.ArtFrom)
+					}
 				</figcaption>
 				<div class="all-sets-text">
 					for _, line := range p.Diff {
@@ -378,4 +384,10 @@ templ allSets(v CardView) {
 			</figure>
 		}
 	</section>
+}
+
+// maverickNote marks a set chip whose printing shows the art of another
+// printing: Master Vault has only maverick images of it.
+templ maverickNote(from string) {
+	<span class="maverick-note" title={ "Maverick: art from " + from } aria-label={ "Maverick: art from " + from }>M</span>
 }
