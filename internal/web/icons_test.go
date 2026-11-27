@@ -63,8 +63,8 @@ func TestIcons(t *testing.T) {
 		t.Errorf("elders has no icon yet: %+v", i)
 	}
 
-	if i := RarityIcon("Variant"); i.URL != "" {
-		t.Errorf("variant has no icon: %+v", i)
+	if i := RarityIcon("Mythic"); i.URL != "" {
+		t.Errorf("an unknown rarity has no icon: %+v", i)
 	}
 
 	if i := RarityIcon("Token Creature"); !strings.HasSuffix(i.URL, "type/tokencreature.svg") {

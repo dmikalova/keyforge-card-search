@@ -103,6 +103,9 @@ templ facetLink(c FacetLink) {
 				{ c.Label }
 			</span>
 			<span class="n">{ strconv.Itoa(c.N) }</span>
+			if c.Active || c.Excluded {
+				<span class="x" aria-hidden="true">×</span>
+			}
 		</a>
 	</li>
 }

@@ -103,6 +103,8 @@ func run(base, out string, w width) bool {
 	c.facetCountsMatch()
 	c.header()
 	c.flagsAndChips()
+	c.activeHighlight()
+	c.typeOrder()
 	c.cardFilters()
 	c.textChanges()
 	c.cardPage()
@@ -602,4 +604,41 @@ func (c *checker) flagsAndChips() {
 	chip := c.eval(`document.querySelector('#zoom .printing')?.innerText.trim() || ''`)
 	name := c.eval(`document.querySelector('#zoom .printing')?.title || ''`)
 	c.expect("set chip shows the set code", chip != "" && len(chip) < len(name), chip+" / "+name)
+}
+
+// activeRow returns how the marked row of a facet looks: its label, the
+// remove mark, and its background, or "none".
+func (c *checker) activeRow(name string) string {
+	return c.eval(
+		`(() => { const sec = [...document.querySelectorAll('.facet')].find(s => s.querySelector('h2')?.innerText.trim().toLowerCase() === '` + name + `'); const a = sec?.querySelector('a.active'); if (!a) return 'none'; const bg = getComputedStyle(a).backgroundColor; return a.querySelector('.label').innerText.trim() + '|' + (a.querySelector('.x') ? 'x' : 'no-x') + '|' + (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' ? 'filled' : 'clear') })()`,
+	)
+}
+
+// activeHighlight checks that an active filter is clearly marked in the
+// sidebar, also after the results change by typing and by a click.
+func (c *checker) activeHighlight() {
+	c.search("h:dis")
+	got := c.activeRow("house")
+	c.expect("active house is highlighted", got == "Dis|x|filled", got)
+
+	c.typeQuery("h:dis t:creature")
+	got = c.activeRow("house") + " " + c.activeRow("type")
+	c.expect("highlight after typing", got == "Dis|x|filled Creature|x|filled", got)
+
+	label, _ := c.facetRow("flags")
+	c.jsClick(`.facet a[data-check="1"]`)
+	c.wait(1200 * time.Millisecond)
+	got = c.activeRow("flags")
+	c.expect("highlight after a click", strings.HasPrefix(got, label+"|x|filled"), got)
+	c.shot("active")
+}
+
+// typeOrder checks that Reference is the last type.
+func (c *checker) typeOrder() {
+	c.search("")
+	types := c.eval(
+		`(() => { const sec = [...document.querySelectorAll('.facet')].find(s => s.querySelector('h2')?.innerText.trim().toLowerCase() === 'type'); return sec ? [...sec.querySelectorAll('.label')].map(l => l.innerText.trim()).join('|') : '' })()`,
+	)
+	c.expect("reference is the last type",
+		!strings.Contains(types, "Reference") || strings.HasSuffix(types, "Reference"), types)
 }

@@ -143,7 +143,11 @@ func (e *Engine) count(items []Item, prints bool) Facets {
 		Houses: counts(t.houses, "h", e.labels.House, func(a, b string) int {
 			return cmp.Or(cmp.Compare(bucketRank(a), bucketRank(b)), cmp.Compare(a, b))
 		}),
-		Types: counts(t.types, "t", e.labels.Type, cmp.Compare[string]),
+		// The four card types come first and Reference last, whatever its
+		// count.
+		Types: counts(t.types, "t", e.labels.Type, func(a, b string) int {
+			return cmp.Or(compareBool(a == FlagReference, b == FlagReference), cmp.Compare(a, b))
+		}),
 		Rarities: counts(
 			t.rarities,
 			"r",

@@ -514,9 +514,9 @@ var sorters = map[string]func(a, b Item) int{
 	},
 }
 
-// rarityOrder is the order of the printed rarities. Other rarities sort
-// after these.
-var rarityOrder = []string{"common", "uncommon", "rare", "special", "variant"}
+// rarityOrder is the order of the rarities of the dataset. Other rarities
+// sort after these.
+var rarityOrder = []string{"common", "uncommon", "rare", "special", "anomaly", "token creature"}
 
 func rarityRank(r string) int {
 	i := slices.Index(rarityOrder, strings.ToLower(r))
