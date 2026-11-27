@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dmikalova/keyforge-card-search/internal/catalog"
+	"github.com/dmikalova/keyforge-card-search/internal/feedback"
 	"github.com/dmikalova/keyforge-card-search/internal/fixture"
 	"github.com/dmikalova/keyforge-card-search/internal/server"
 )
@@ -47,9 +48,16 @@ func run() error {
 		return err
 	}
 
+	// The feedback form posts to the Discord webhook of the mounted secrets.
+	// Without the secrets file, as in local work, the form is off.
+	webhook, err := feedback.ReadWebhook(feedback.DefaultSecretsPath)
+	if err != nil {
+		return err
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           server.New(src, log).Handler(),
+		Handler:           server.New(src, log).WithFeedback(feedback.New(webhook, log)).Handler(),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 

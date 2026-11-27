@@ -17,6 +17,7 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/dmikalova/keyforge-card-search/internal/catalog"
+	"github.com/dmikalova/keyforge-card-search/internal/feedback"
 	"github.com/dmikalova/keyforge-card-search/internal/search"
 	"github.com/dmikalova/keyforge-card-search/internal/web"
 )
@@ -30,6 +31,8 @@ type Server struct {
 	log *slog.Logger
 	// seed gives the seed of a "sort:random" query without one.
 	seed func() uint64
+	// feedback sends the feedback form to Discord. Nil turns the form off.
+	feedback *feedback.Handler
 }
 
 // New returns a Server for the source. A nil logger means slog.Default.
@@ -39,6 +42,13 @@ func New(src catalog.Source, log *slog.Logger) *Server {
 	}
 
 	return &Server{src: src, log: log, seed: rand.Uint64}
+}
+
+// WithFeedback turns on the feedback form, which posts to h.
+func (s *Server) WithFeedback(h *feedback.Handler) *Server {
+	s.feedback = h
+
+	return s
 }
 
 // Handler returns the routes.
@@ -59,6 +69,7 @@ func (s *Server) Handler() http.Handler {
 		s.render(w, r, web.SyntaxContent())
 	})
 	mux.HandleFunc("GET /api/cards", s.export)
+	mux.Handle("POST /api/feedback", s.feedback)
 	mux.Handle("GET /static/", web.StaticHandler())
 	mux.Handle("GET /icons/{path...}", newIconProxy(IconOrigin))
 	mux.HandleFunc("GET /health", s.health)
@@ -117,6 +128,7 @@ func (s *Server) searchPage(w http.ResponseWriter, r *http.Request, c *card.Card
 		Query:    canonical(e, q),
 		Missing:  s.src.Missing(),
 		Complete: web.CompleteJSON(e.Completions()),
+		Feedback: s.feedback.Enabled(),
 	}
 
 	if c != nil {
@@ -366,15 +378,6 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// setName returns the full name of a set slug, or the slug.
-func (s *Server) setName(slug string) string {
-	if set, ok := s.src.Engine().SetOf(slug); ok {
-		return set.Name
-	}
-
-	return slug
-}
-
 // defaultPrint returns the index of a card's default printing: the newest
 // printing that is not an anomaly, or the newest printing.
 func defaultPrint(c *card.Card) int {
@@ -418,4 +421,14 @@ func (s *Server) related(c *card.Card) []exportRelated {
 	}
 
 	return out
+}
+
+// setNames returns the code and the full name of a set slug, or the slug
+// twice.
+func (s *Server) setNames(slug string) (string, string) {
+	if set, ok := s.src.Engine().SetOf(slug); ok {
+		return set.Code, set.Name
+	}
+
+	return slug, slug
 }
