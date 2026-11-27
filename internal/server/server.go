@@ -1,4 +1,4 @@
-// Package server holds the HTTP routes of the card search.
+// Package server holds the HTTP routes of the card gallery.
 package server
 
 import (
@@ -16,10 +16,10 @@ import (
 	"github.com/dmikalova/keyforge-data/query"
 	"github.com/starfederation/datastar-go/datastar"
 
-	"github.com/dmikalova/keyforge-card-search/internal/catalog"
-	"github.com/dmikalova/keyforge-card-search/internal/feedback"
-	"github.com/dmikalova/keyforge-card-search/internal/search"
-	"github.com/dmikalova/keyforge-card-search/internal/web"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/catalog"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/feedback"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/search"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/web"
 )
 
 // maxQuery is the longest query that the server reads.

@@ -11,8 +11,8 @@ import (
 
 	"github.com/dmikalova/keyforge-data/card"
 
-	"github.com/dmikalova/keyforge-card-search/internal/catalog"
-	"github.com/dmikalova/keyforge-card-search/internal/fixture"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/catalog"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/fixture"
 )
 
 func handler(t *testing.T) http.Handler {

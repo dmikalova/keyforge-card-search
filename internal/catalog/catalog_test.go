@@ -10,7 +10,7 @@ import (
 
 	"github.com/dmikalova/keyforge-data/card"
 
-	"github.com/dmikalova/keyforge-card-search/internal/fixture"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/fixture"
 )
 
 func TestImageURL(t *testing.T) {

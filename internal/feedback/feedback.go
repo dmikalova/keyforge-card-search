@@ -177,7 +177,7 @@ func (h *Handler) allow(ip string) bool {
 // post sends the message to Discord. The message is in a quote, and Discord
 // parses no mentions, so the text cannot ping anyone.
 func (h *Handler) post(ctx context.Context, msg, pageURL string) error {
-	content := "**search.keyforge.cards feedback**\n> " +
+	content := "**gallery.keyforge.cards feedback**\n> " +
 		strings.ReplaceAll(msg, "\n", "\n> ")
 	if pageURL != "" {
 		content += "\nPage: <" + pageURL + ">"
@@ -215,7 +215,7 @@ func (h *Handler) post(ctx context.Context, msg, pageURL string) error {
 // page keeps a page URL of the site, or "".
 func page(u string) string {
 	u = strings.TrimSpace(u)
-	if !strings.HasPrefix(u, "https://search.keyforge.cards/") &&
+	if !strings.HasPrefix(u, "https://gallery.keyforge.cards/") &&
 		!strings.HasPrefix(u, "http://localhost") {
 		return ""
 	}

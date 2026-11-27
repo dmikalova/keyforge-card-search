@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/dmikalova/keyforge-card-search/internal/fixture"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/fixture"
 )
 
 // artistEngine is the fixture with artists on the first printing of three

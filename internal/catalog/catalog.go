@@ -21,7 +21,7 @@ import (
 
 	"github.com/dmikalova/keyforge-data/card"
 
-	"github.com/dmikalova/keyforge-card-search/internal/search"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/search"
 )
 
 // Source gives the engine of the current dataset.

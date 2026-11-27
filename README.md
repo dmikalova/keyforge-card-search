@@ -1,6 +1,6 @@
-# keyforge-card-search
+# gallery.keyforge.cards
 
-The KeyForge card search at search.keyforge.cards.
+The KeyForge card gallery at gallery.keyforge.cards.
 
 - Go, templ, and Datastar.
 - The card data and the query engine come from

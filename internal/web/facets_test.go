@@ -3,8 +3,8 @@ package web
 import (
 	"testing"
 
-	"github.com/dmikalova/keyforge-card-search/internal/fixture"
-	"github.com/dmikalova/keyforge-card-search/internal/search"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/fixture"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/search"
 )
 
 func TestFacetsMarkFilters(t *testing.T) {

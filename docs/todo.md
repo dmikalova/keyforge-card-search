@@ -1,11 +1,11 @@
 # Todo
 
-The work plan for search.keyforge.cards. This work starts after phase 5 of the
+The work plan for gallery.keyforge.cards. This work starts after phase 5 of the
 keyforge-data todo. The vocabulary is in [../CONTEXT.md](../CONTEXT.md).
 
 ## Setup
 
-- [x] Add `go.mod` (`github.com/dmikalova/keyforge-card-search`),
+- [x] Add `go.mod` (`github.com/dmikalova/gallery.keyforge.cards`),
   `mklv.config.json` (`kind: cloudrun`), `lefthook.jsonc`, `paseo.json`,
   `AGENTS.md`, the Dockerfile, and the magefiles with the project-standards
   `ci` import.

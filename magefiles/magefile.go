@@ -1,6 +1,6 @@
 //go:build mage
 
-// keyforge-card-search developer tasks. The ci namespace comes from project-standards'
+// gallery.keyforge.cards developer tasks. The ci namespace comes from project-standards'
 // shared ci package. Run `mage -l` to list them, and
 // `mage ci:fix && mage ci:check` before calling work done.
 package main

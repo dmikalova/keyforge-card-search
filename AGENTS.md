@@ -1,4 +1,4 @@
-# keyforge-card-search
+# gallery.keyforge.cards
 
 Conventions for this repository. The vocabulary is in [CONTEXT.md](CONTEXT.md).
 The decisions are in [docs/adr](docs/adr). The work plan is in

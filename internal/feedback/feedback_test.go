@@ -45,7 +45,7 @@ func TestHandlerPostsToDiscord(t *testing.T) {
 	defer discord.Close()
 
 	h := New(discord.URL, nil)
-	body := `{"message":"Hi @everyone\nline two","page":"https://search.keyforge.cards/?q=h:dis"}`
+	body := `{"message":"Hi @everyone\nline two","page":"https://gallery.keyforge.cards/?q=h:dis"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/feedback", strings.NewReader(body))
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
@@ -56,7 +56,7 @@ func TestHandlerPostsToDiscord(t *testing.T) {
 
 	content, _ := got["content"].(string)
 	if !strings.Contains(content, "> Hi @everyone\n> line two") ||
-		!strings.Contains(content, "Page: <https://search.keyforge.cards/?q=h:dis>") {
+		!strings.Contains(content, "Page: <https://gallery.keyforge.cards/?q=h:dis>") {
 		t.Errorf("content = %q", content)
 	}
 

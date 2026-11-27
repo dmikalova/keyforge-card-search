@@ -1,4 +1,4 @@
-// Command search serves the KeyForge card search at search.keyforge.cards.
+// Command search serves the KeyForge card gallery at gallery.keyforge.cards.
 package main
 
 import (
@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dmikalova/keyforge-card-search/internal/catalog"
-	"github.com/dmikalova/keyforge-card-search/internal/feedback"
-	"github.com/dmikalova/keyforge-card-search/internal/fixture"
-	"github.com/dmikalova/keyforge-card-search/internal/server"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/catalog"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/feedback"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/fixture"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/server"
 )
 
 const (

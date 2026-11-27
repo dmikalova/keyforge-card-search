@@ -1,4 +1,4 @@
-module github.com/dmikalova/keyforge-card-search
+module github.com/dmikalova/gallery.keyforge.cards
 
 go 1.27.2
 

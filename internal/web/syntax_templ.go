@@ -56,7 +56,7 @@ func SyntaxPage() templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = page("Query syntax · KeyForge card search", "The query syntax of the KeyForge card search.", PageView{}, false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = page("Query syntax · KeyForge card gallery", "The query syntax of the KeyForge card gallery.", PageView{}, false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

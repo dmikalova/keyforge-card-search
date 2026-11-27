@@ -10,8 +10,8 @@ import (
 	"github.com/dmikalova/keyforge-data/card"
 	"github.com/starfederation/datastar-go/datastar"
 
-	"github.com/dmikalova/keyforge-card-search/internal/search"
-	"github.com/dmikalova/keyforge-card-search/internal/web"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/search"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/web"
 )
 
 // barSignals are the Datastar signals of the search bar: the query text.

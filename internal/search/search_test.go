@@ -8,7 +8,7 @@ import (
 
 	"github.com/dmikalova/keyforge-data/query"
 
-	"github.com/dmikalova/keyforge-card-search/internal/fixture"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/fixture"
 )
 
 func engine(t *testing.T) *Engine {

@@ -1,4 +1,4 @@
-module github.com/dmikalova/keyforge-card-search/uicheck
+module github.com/dmikalova/gallery.keyforge.cards/uicheck
 
 go 1.27
 

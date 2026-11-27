@@ -11,8 +11,8 @@ import (
 	"github.com/a-h/templ"
 	"github.com/dmikalova/keyforge-data/card"
 
-	"github.com/dmikalova/keyforge-card-search/internal/catalog"
-	"github.com/dmikalova/keyforge-card-search/internal/search"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/catalog"
+	"github.com/dmikalova/gallery.keyforge.cards/internal/search"
 )
 
 // BatchSize is the number of results in one batch (ADR 0002).
@@ -592,10 +592,10 @@ var syntaxFields = []syntaxField{
 // PageTitle returns the page title of a query.
 func PageTitle(q string) string {
 	if q == "" {
-		return "KeyForge card search"
+		return "KeyForge card gallery"
 	}
 
-	return q + " · KeyForge card search"
+	return q + " · KeyForge card gallery"
 }
 
 func plural(n int, one, many string) string {

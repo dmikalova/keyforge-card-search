@@ -1,6 +1,6 @@
-# keyforge-card-search
+# gallery.keyforge.cards
 
-The vocabulary of the card search site. The card vocabulary (card, printing,
+The vocabulary of the card gallery site. The card vocabulary (card, printing,
 set, reference card …) is in the keyforge-data CONTEXT.md. This file is a
 glossary only.
 

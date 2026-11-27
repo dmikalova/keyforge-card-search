@@ -9,7 +9,7 @@ templ page(title, description string, v PageView, live bool) {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			if v.Meta != nil {
-				<title>{ v.Meta.Title } · KeyForge card search</title>
+				<title>{ v.Meta.Title } · KeyForge card gallery</title>
 				<meta name="description" content={ v.Meta.Description }/>
 				<meta property="og:type" content="article"/>
 				<meta property="og:title" content={ v.Meta.Title }/>
@@ -46,7 +46,7 @@ templ page(title, description string, v PageView, live bool) {
 			<header class="top">
 				<a class="brand" href="/">
 					<span class="wordmark">KeyForge</span>
-					<span class="sub">card search</span>
+					<span class="sub">card gallery</span>
 				</a>
 				@SearchBar(v, live)
 				<nav id="actions" class="actions">
