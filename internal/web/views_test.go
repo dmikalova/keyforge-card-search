@@ -50,3 +50,37 @@ func TestCommas(t *testing.T) {
 		}
 	}
 }
+
+// TestCardViewNamesFlagsAndSets checks the card view of a token creature: the
+// flags have their names, the type icon is the creature icon, the rarity
+// icon is the token creature icon, and the set chip shows the set code.
+func TestCardViewNamesFlagsAndSets(t *testing.T) {
+	c := &card.Card{
+		ID: "grumpus-brobnar", Title: "Grumpus", House: "brobnar", Type: "creature",
+		Flags: []string{"reference", "tokencreature"},
+		Printings: []card.Printing{
+			{Set: "windsofexchange", Number: "T01", Rarity: "Token Creature"},
+		},
+	}
+	v := NewCardView(c, 0, nil,
+		func(string) (string, string) { return "WoE", "Winds of Exchange" },
+		func(string) *card.Card { return nil })
+
+	var flags []string
+	for _, f := range v.Flags {
+		flags = append(flags, f.Value)
+	}
+	if len(flags) != 2 || flags[0] != "Reference" || flags[1] != "Token Creature" {
+		t.Errorf("flags = %v", flags)
+	}
+	if v.Type.Icon.URL != iconBase+"type/creature.svg" {
+		t.Errorf("type icon = %q, want the creature icon", v.Type.Icon.URL)
+	}
+	if v.Rarities[0].Icon.URL != iconBase+"type/tokencreature.svg" {
+		t.Errorf("rarity icon = %q, want the token creature icon", v.Rarities[0].Icon.URL)
+	}
+	if p := v.Sets[0]; p.Label != "WoE T01" || p.Name != "Winds of Exchange T01" ||
+		p.Set.Value != "Winds of Exchange" {
+		t.Errorf("set chip = %q / %q / %q", p.Label, p.Name, p.Set.Value)
+	}
+}

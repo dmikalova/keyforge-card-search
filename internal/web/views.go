@@ -98,6 +98,8 @@ type PageView struct {
 	Card *CardView
 	// Meta is the link preview of the page, or nil for the default one.
 	Meta *PageMeta
+	// Feedback is true when the feedback form can send.
+	Feedback bool
 }
 
 // Signals returns the Datastar signals of the page: the query text.
@@ -237,6 +239,7 @@ func NewFacets(e *search.Engine, q string, f search.Facets) []FacetGroup {
 		group("Æmber", "aember", f.Aember, false),
 		group("Keyword", "keyword", f.Keywords, false),
 		group("Ability", "ability", f.Abilities, false),
+		group("Flags", "is", f.Flags, false),
 		group("Trait", "trait", f.Traits, true),
 		group("Artist", "artist", f.Artists, true),
 	} {
@@ -296,8 +299,11 @@ func (f Field) Excluded() bool { return f.State == search.StateExcluded }
 
 // PrintView is one printing in the card view.
 type PrintView struct {
-	Index   int
+	Index int
+	// Label is the set code and the number: "WoE 193". Name is the full set
+	// name and the number, for the tooltip.
 	Label   string
+	Name    string
 	SetIcon Icon
 	Image   string
 	// Flavor is the flavor text, one line in each element, with the names
@@ -344,10 +350,15 @@ func (v CardView) Current() PrintView {
 	return PrintView{}
 }
 
-// NewCardView makes the card view. setName gives the full set name of a slug,
-// and find gives the other cards of the mentions and the threads.
+// SetNames gives the code and the full name of a set slug, for example "WoE"
+// and "Winds of Exchange".
+type SetNames func(slug string) (code, name string)
+
+// NewCardView makes the card view. setNames gives the code and the full name
+// of a set, and find gives the other cards of the mentions and the threads.
+// The set chips show the code: the card view is narrow.
 func NewCardView(
-	c *card.Card, shown int, labels search.Labels, setName func(string) string, find Lookup,
+	c *card.Card, shown int, labels search.Labels, setNames SetNames, find Lookup,
 ) CardView {
 	v := CardView{
 		ID:    c.ID,
@@ -359,7 +370,7 @@ func NewCardView(
 		},
 		Type: Field{
 			Label: "Type", Value: labels.Type(c.Type),
-			Icon: TypeIcon(cardTypeKey(c), labels.Type(c.Type)),
+			Icon: TypeIcon(c.Type, labels.Type(c.Type)),
 			Term: search.FieldTerm("type", strings.ToLower(c.Type)),
 		},
 		Keywords: keywordFields(c.Keywords),
@@ -378,7 +389,7 @@ func NewCardView(
 	}
 
 	for _, f := range c.Flags {
-		v.Flags = append(v.Flags, Field{Value: f, Term: "is:" + f})
+		v.Flags = append(v.Flags, Field{Value: labels.Flag(f), Term: "is:" + f})
 	}
 
 	for _, n := range c.Notes {
@@ -411,17 +422,19 @@ func NewCardView(
 	v.Text = textLines(c.Text, c)
 
 	for i, p := range c.Printings {
+		code, name := setNames(p.Set)
 		v.Sets = append(v.Sets, PrintView{
 			Index:   i,
-			Label:   setName(p.Set) + " " + p.Number,
-			SetIcon: SetIcon(p.Set, setName(p.Set)),
+			Label:   code + " " + p.Number,
+			Name:    name + " " + p.Number,
+			SetIcon: SetIcon(p.Set, name),
 			Image:   catalog.ImageURL(p.Image),
 			Flavor:  flavorLines(p.Flavor, c),
 			Text:    v.Text,
 			Changed: p.Text != "",
 			Diff:    DiffParts(search.PlainText(c.Text), search.PlainText(c.Text)),
 			Set: Field{
-				Value: setName(p.Set), Icon: SetIcon(p.Set, setName(p.Set)),
+				Value: name, Icon: SetIcon(p.Set, name),
 				Term: search.FieldTerm("set", p.Set),
 			},
 		})
@@ -637,16 +650,6 @@ func toggleTitle(c FacetLink) string {
 
 func itoa(n int) string {
 	return strconv.Itoa(n)
-}
-
-// cardTypeKey returns the type icon name of a card: a token creature has
-// its own icon.
-func cardTypeKey(c *card.Card) string {
-	if c.HasFlag(search.FlagTokenCreature) {
-		return "tokencreature"
-	}
-
-	return c.Type
 }
 
 // printRarity returns the rarity icon name of a printing. An anomaly has the

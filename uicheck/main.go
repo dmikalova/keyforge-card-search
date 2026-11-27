@@ -99,6 +99,10 @@ func run(base, out string, w width) bool {
 	c.pageRenders()
 	c.marks()
 	c.slider()
+	c.sliderKeepsItsPlace()
+	c.facetCountsMatch()
+	c.header()
+	c.flagsAndChips()
 	c.cardFilters()
 	c.textChanges()
 	c.cardPage()
@@ -471,4 +475,131 @@ func (c *checker) textChanges() {
 	c.shot("all-sets")
 
 	c.jsClick(`#zoom .zoom-close`)
+}
+
+// typeQuery types a query into the search bar, as a user does, so the
+// results change without a page load.
+func (c *checker) typeQuery(q string) {
+	c.eval(fmt.Sprintf(
+		`(() => { const i = document.getElementById('q'); i.value = %q; i.dispatchEvent(new Event('input', {bubbles: true})); return '' })()`,
+		q,
+	))
+	c.wait(1800 * time.Millisecond)
+}
+
+// sliderState returns the slider value and its filled part.
+func (c *checker) sliderState() string {
+	return c.eval(
+		`(() => { const s = document.getElementById('size'); return s.min + '-' + s.max + ':' + s.value + ':' + s.style.getPropertyValue('--fill') })()`,
+	)
+}
+
+// sliderKeepsItsPlace checks that a search does not move the slider's thumb.
+func (c *checker) sliderKeepsItsPlace() {
+	c.search("")
+
+	v := 260
+	if c.w.mobile {
+		v = 5
+	}
+
+	c.setSlider(v)
+	before := c.sliderState()
+	c.typeQuery("h:dis")
+	after := c.sliderState()
+	c.expect("slider keeps its place after a search", before == after, before+" then "+after)
+}
+
+// count returns the result count of the page.
+func (c *checker) count() int {
+	return atoi(strings.ReplaceAll(
+		c.eval(`document.querySelector('.count strong')?.innerText || ''`), ",", ""))
+}
+
+// facetRow returns the label and count of the first row of a facet that the
+// query does not filter on, or "".
+func (c *checker) facetRow(name string) (string, int) {
+	s := c.eval(
+		`(() => { const sec = [...document.querySelectorAll('.facet')].find(s => s.querySelector('h2')?.innerText.trim().toLowerCase() === '` + name + `'); if (!sec) return ''; const a = sec.querySelector('a:not(.active):not(.excluded)'); if (!a) return ''; a.setAttribute('data-check', '1'); return a.querySelector('.label').innerText.trim() + '|' + a.querySelector('.n').innerText.trim() })()`,
+	)
+
+	label, n, ok := strings.Cut(s, "|")
+	if !ok {
+		return "", 0
+	}
+
+	return label, atoi(strings.ReplaceAll(n, ",", ""))
+}
+
+// facetCountsMatch checks that a facet count is the number of results that
+// a click on the value finds.
+func (c *checker) facetCountsMatch() {
+	for _, name := range []string{"rarity", "set", "flags", "type"} {
+		c.search("")
+
+		label, n := c.facetRow(name)
+		if label == "" {
+			c.fail("facet "+name, "no row")
+			continue
+		}
+
+		c.jsClick(`.facet a[data-check="1"]`)
+		c.wait(1200 * time.Millisecond)
+		got := c.count()
+		c.expect(
+			fmt.Sprintf("%s %s count matches its click", name, label),
+			got == n,
+			fmt.Sprintf("facet %d, results %d", n, got),
+		)
+	}
+}
+
+// header checks the header buttons: a menu on a phone, and a Random icon
+// on a narrow header.
+func (c *checker) header() {
+	c.search("")
+
+	if c.w.mobile {
+		hidden := c.eval(`getComputedStyle(document.getElementById('menu-items')).display`)
+		c.expect("phone menu starts closed", hidden == "none", hidden)
+		c.click("#menu")
+		shown := c.eval(`getComputedStyle(document.getElementById('menu-items')).display`)
+		label := c.eval(`getComputedStyle(document.querySelector('#random .label')).display`)
+		c.expect("menu button opens the menu", shown == "flex" && label != "none", shown+" "+label)
+		c.shot("menu")
+		c.click("#menu")
+
+		return
+	}
+
+	menu := c.eval(`getComputedStyle(document.getElementById('menu')).display`)
+	c.expect("desk has no menu button", menu == "none", menu)
+
+	c.must(chromedp.Run(c.ctx, emulation.SetDeviceMetricsOverride(900, c.w.h, 1, false)))
+	c.wait(300 * time.Millisecond)
+	icon := c.eval(`getComputedStyle(document.querySelector('#random .random-icon')).display`) +
+		"/" + c.eval(`getComputedStyle(document.querySelector('#random .label')).display`)
+	c.expect("narrow header shows the Random icon", icon == "block/none", icon)
+	c.must(chromedp.Run(c.ctx, emulation.SetDeviceMetricsOverride(c.w.w, c.w.h, 2, false)))
+	c.wait(300 * time.Millisecond)
+}
+
+// flagsAndChips checks the Flags facet and the set codes of the card view.
+func (c *checker) flagsAndChips() {
+	c.search("")
+
+	flags := c.eval(
+		`(() => { const sec = [...document.querySelectorAll('.facet')].find(s => s.querySelector('h2')?.innerText.trim().toLowerCase() === 'flags'); return sec ? [...sec.querySelectorAll('.label')].map(l => l.innerText.trim()).join('|') : '' })()`,
+	)
+	c.expect(
+		"flags facet shows flag names",
+		flags != "" && !strings.Contains(flags, "tokencreature"),
+		flags,
+	)
+
+	c.search("is:reprint")
+	c.click(".grid .tile")
+	chip := c.eval(`document.querySelector('#zoom .printing')?.innerText.trim() || ''`)
+	name := c.eval(`document.querySelector('#zoom .printing')?.title || ''`)
+	c.expect("set chip shows the set code", chip != "" && len(chip) < len(name), chip+" / "+name)
 }

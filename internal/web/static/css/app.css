@@ -163,8 +163,109 @@ code {
 }
 
 .actions {
+  position: relative;
   display: flex;
   gap: 0.5rem;
+}
+
+/* The buttons of the header. On a wide screen they sit in one row, and
+   only the Random button shows its word. The menu button is for phones. */
+.menu-items {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.actions .menu-toggle,
+.menu-items .round .label,
+.random .random-icon {
+  display: none;
+}
+
+.random {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* A narrow header shows the Random button as an icon. */
+@media (max-width: 1000px) {
+  .random .random-icon {
+    display: block;
+  }
+
+  .random .label {
+    display: none;
+  }
+
+  .random {
+    padding: 0.4rem 0.55rem;
+  }
+}
+
+/* On a phone, the menu button opens the buttons as a list under it. */
+@media (max-width: 720px) {
+  .actions .menu-toggle {
+    display: inline-grid;
+  }
+
+  .menu-items {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 40;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    min-width: 12rem;
+    padding: 0.35rem;
+    border: 1px solid var(--muted);
+    border-radius: var(--radius);
+    background: var(--card);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 40%);
+  }
+
+  .actions.open .menu-items {
+    display: flex;
+  }
+
+  .menu-items .button,
+  .menu-items .round {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 0.7rem;
+    border: none;
+    border-radius: var(--radius);
+    background: none;
+    font: inherit;
+    text-align: left;
+  }
+
+  .menu-items .button:hover,
+  .menu-items .button:focus-visible {
+    background: var(--surface);
+  }
+
+  .menu-items .label,
+  .menu-items .round .label,
+  .menu-items .random .label {
+    display: inline;
+  }
+
+  .menu-items .random .random-icon {
+    display: block;
+  }
+
+  .menu-items .help .mark {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    font-weight: bold;
+  }
 }
 
 /* A round button: the same width and height, so it is a circle. */
@@ -402,7 +503,6 @@ main {
   justify-content: center;
   padding: 16px;
   overflow-y: auto;
-  overscroll-behavior: contain;
   z-index: 10;
 }
 
@@ -648,9 +748,6 @@ html:has(.syntax-modal:not([hidden])) {
     flex: 1;
   }
 
-  .facet {
-    min-width: 140px;
-  }
 }
 
 /* The autocomplete list of the search bar. */
@@ -755,6 +852,11 @@ html:has(.syntax-modal:not([hidden])) {
   .zoom-card {
     flex-direction: column;
     align-items: stretch;
+    /* One scroll box on a phone: the backdrop. A second scroll box in it
+       takes a one-finger drag after a pinch zoom, so the page could not
+       pan. */
+    max-height: none;
+    overflow: visible;
   }
 
   .zoom-image {
@@ -916,11 +1018,18 @@ html:has(.syntax-modal:not([hidden])) {
   color: var(--on-surface);
 }
 
-/* On a phone the facets are narrow columns, so a long label wraps instead
-   of running into its count. */
+/* On a phone each facet column is as wide as its longest label, so a long
+   label such as Unfathomable stays on one line with a gap before its
+   count. The facet list scrolls sideways. */
 @media (max-width: 720px) {
-  .facet .label {
-    white-space: normal;
+  .facet {
+    flex: none;
+    width: max-content;
+    min-width: 150px;
+  }
+
+  .facet a {
+    gap: 1rem;
   }
 }
 
@@ -1001,4 +1110,49 @@ mark.diff {
 /* The funnel is a block, so no text baseline moves it off the center. */
 .set-filter svg {
   display: block;
+}
+
+/* The feedback form. It uses the card view's backdrop and box. */
+.feedback-modal {
+  z-index: 11;
+}
+
+.feedback-card {
+  position: relative;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+  width: min(520px, 100%);
+}
+
+.feedback-card h2 {
+  margin: 0;
+}
+
+.feedback-help {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.feedback-card textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 0.5rem;
+  border: 1px solid var(--muted);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--on-surface);
+  font: inherit;
+}
+
+.feedback-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+#feedback-status {
+  color: var(--muted);
+  font-size: 0.9rem;
 }

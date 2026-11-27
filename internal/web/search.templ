@@ -198,7 +198,7 @@ templ Zoom(v CardView) {
 				<ul class="printings">
 					for _, p := range v.Sets {
 						<li>
-							<button type="button" class={ "printing", templ.KV("active", p.Index == v.Print) } data-img={ p.Image } data-print={ itoa(p.Index) }>
+							<button type="button" class={ "printing", templ.KV("active", p.Index == v.Print) } data-img={ p.Image } data-print={ itoa(p.Index) } title={ p.Name }>
 								@icon(p.SetIcon)
 								<span>{ p.Label }</span>
 								if p.Changed {
@@ -348,10 +348,10 @@ templ allSets(v CardView) {
 	<section id="all-sets" class="all-sets" hidden>
 		for _, p := range v.Sets {
 			<figure class="all-sets-print">
-				<img src={ p.Image } alt={ p.Label } loading="lazy" width="150" height="210"/>
+				<img src={ p.Image } alt={ p.Name } loading="lazy" width="150" height="210"/>
 				<figcaption>
 					@icon(p.SetIcon)
-					<span>{ p.Label }</span>
+					<span title={ p.Name }>{ p.Label }</span>
 					if p.Changed {
 						@textChangedIcon()
 					}

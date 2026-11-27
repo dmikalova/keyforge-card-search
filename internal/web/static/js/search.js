@@ -518,6 +518,8 @@
   document.addEventListener("keydown", (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "Escape") {
+      setMenu(false);
+      if (closeFeedback()) return;
       if (closeSyntax()) return;
       if (closeZoom()) return;
       if (typing(e.target)) e.target.blur();
@@ -528,6 +530,8 @@
     // shortcuts wait.
     const sm = syntaxModal();
     if (sm && !sm.hidden) return;
+    const fm = feedbackModal();
+    if (fm && !fm.hidden) return;
     if (e.key === "/") {
       e.preventDefault();
       const q = input();
@@ -582,7 +586,86 @@
     return true;
   };
 
+
+  // The phone menu: the menu button opens the header buttons as a list.
+  const actions = () => $("actions");
+  const setMenu = (open) => {
+    const a = actions();
+    if (!a) return;
+    a.classList.toggle("open", open);
+    $("menu")?.setAttribute("aria-expanded", String(open));
+  };
+
+  // The feedback form posts the message and the page URL to the server,
+  // which sends them to the maintainer (internal/feedback).
+  const feedbackModal = () => $("feedback-modal");
+  let feedbackOpener = null;
+  const openFeedback = () => {
+    const m = feedbackModal();
+    if (!m) return;
+    closeZoom();
+    closeSyntax();
+    feedbackOpener = document.activeElement;
+    m.hidden = false;
+    $("feedback-status").textContent = "";
+    $("feedback-text")?.focus({ preventScroll: true });
+  };
+  const closeFeedback = () => {
+    const m = feedbackModal();
+    if (!m || m.hidden) return false;
+    m.hidden = true;
+    feedbackOpener?.focus?.({ preventScroll: true });
+    feedbackOpener = null;
+    return true;
+  };
+
+  document.addEventListener("submit", async (e) => {
+    if (e.target.id !== "feedback-form") return;
+    e.preventDefault();
+    const text = $("feedback-text");
+    const status = $("feedback-status");
+    const send = e.target.querySelector("button[type=submit]");
+    const message = text.value.trim();
+    if (!message) return;
+    send.disabled = true;
+    status.textContent = "Sending…";
+    try {
+      const r = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, page: location.href }),
+      });
+      if (!r.ok) throw new Error((await r.text()).trim() || r.statusText);
+      text.value = "";
+      status.textContent = "Thank you! The feedback is sent.";
+      setTimeout(closeFeedback, 1500);
+    } catch (err) {
+      status.textContent = `Not sent: ${err.message}`;
+    } finally {
+      send.disabled = false;
+    }
+  });
+
   document.addEventListener("click", (e) => {
+    // The menu button opens and closes the menu. A click on a menu item or
+    // outside the menu closes it.
+    if (e.target.closest("#menu")) {
+      setMenu(!actions()?.classList.contains("open"));
+      return;
+    }
+    if (actions()?.classList.contains("open") && !e.target.closest(".menu-items .help, #feedback")) {
+      setMenu(false);
+    }
+    if (e.target.closest("#feedback")) {
+      setMenu(false);
+      openFeedback();
+      return;
+    }
+    const fm = feedbackModal();
+    if (fm && !fm.hidden && fm.contains(e.target)) {
+      if (e.target === fm || e.target.closest(".zoom-close")) closeFeedback();
+      return;
+    }
     const sm = syntaxModal();
     if (sm && !sm.hidden && sm.contains(e.target)) {
       // The backdrop or the close button closes the modal. A click in the
@@ -762,9 +845,11 @@
     // slider to the current size.
     const main = document.querySelector("main");
     if (main && "MutationObserver" in window) {
+      // A morph of the results can put the server's slider attributes
+      // back while the input keeps its old value, so the thumb moves. Set
+      // the slider again after each change of the results.
       new MutationObserver(() => {
-        const s = document.getElementById("size");
-        if (s && !s.style.getPropertyValue("--fill")) setSize(current());
+        if (document.getElementById("size")) setSize(current());
       }).observe(main, { childList: true, subtree: true });
     }
     restorePlace();

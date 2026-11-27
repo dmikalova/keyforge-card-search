@@ -28,7 +28,7 @@ func TestCardMeta(t *testing.T) {
 		c,
 		0,
 		nil,
-		func(s string) string { return s },
+		func(s string) (string, string) { return s, s },
 		func(string) *card.Card { return nil },
 	)
 	m := CardMeta(v, c)
@@ -55,7 +55,7 @@ func TestCardNotes(t *testing.T) {
 			{Set: "callofthearchons", Number: "089", Image: "callofthearchons/089.webp"},
 		},
 	}
-	v := NewCardView(c, 0, nil, func(s string) string { return s },
+	v := NewCardView(c, 0, nil, func(s string) (string, string) { return s, s },
 		func(string) *card.Card { return nil })
 
 	if len(v.Notes) != 1 || v.Notes[0] != "Always 3+ copies" {
@@ -79,7 +79,7 @@ func TestCardMetaStats(t *testing.T) {
 		{card.Card{House: "dis", Type: "action"}, "Dis · Action"},
 	} {
 		c.card.Printings = []card.Printing{{Set: "callofthearchons", Number: "001"}}
-		v := NewCardView(&c.card, 0, nil, func(s string) string { return s },
+		v := NewCardView(&c.card, 0, nil, func(s string) (string, string) { return s, s },
 			func(string) *card.Card { return nil })
 
 		if got := CardMeta(v, &c.card).Description; got != c.want {
