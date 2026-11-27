@@ -812,7 +812,7 @@ html:has(.syntax-modal:not([hidden])) {
 /* An inset ring stays inside the row, so it does not cover the rows next
    to it. */
 /* A value that the query filters on is clearly marked: a tinted fill, a
-   ring, white text, and a remove mark (×). A click removes the filter. */
+   ring, and white text. A click removes the filter. */
 .facet a.active {
   background: color-mix(in srgb, var(--primary) 28%, transparent);
   box-shadow: inset 0 0 0 2px var(--primary);
@@ -828,18 +828,6 @@ html:has(.syntax-modal:not([hidden])) {
   font-weight: 700;
 }
 
-.facet .x {
-  position: relative;
-  flex: none;
-  margin-left: -0.15rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--primary);
-}
-
-.facet a.excluded .x {
-  color: var(--muted);
-}
 
 /* An excluded value (a negated filter) has a dashed ring and a struck
    label. A click removes the negation. */

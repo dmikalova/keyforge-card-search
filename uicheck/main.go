@@ -643,18 +643,19 @@ func (c *checker) activeRow(name string) string {
 func (c *checker) activeHighlight() {
 	c.search("h:dis")
 	got := c.activeRow("house")
-	c.expect("active house is highlighted", got == "Dis|x|filled", got)
+	// A marked row has no remove mark: the user wants the count in place.
+	c.expect("active house is highlighted", got == "Dis|no-x|filled", got)
 
 	c.typeQuery("h:dis t:creature")
 	got = c.activeRow("house") + " " + c.activeRow("type")
-	c.expect("highlight after typing", got == "Dis|x|filled Creature|x|filled", got)
+	c.expect("highlight after typing", got == "Dis|no-x|filled Creature|no-x|filled", got)
 
 	c.search("")
 	label, _ := c.facetRow("flags")
 	c.jsClick(`.facet a[data-check="1"]`)
 	c.wait(1200 * time.Millisecond)
 	got = c.activeRow("flags")
-	c.expect("highlight after a click", strings.HasPrefix(got, label+"|x|filled"), got)
+	c.expect("highlight after a click", strings.HasPrefix(got, label+"|no-x|filled"), got)
 	c.shot("active")
 }
 
